@@ -1,11 +1,11 @@
 // --- Firebase Configuration ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAT8L9vDqFHyGB-MybtcLEBgCALuNflTZY",
-  authDomain: "red-train-rotation-tool.firebaseapp.com",
-  projectId: "red-train-rotation-tool",
-  storageBucket: "red-train-rotation-tool.firebasestorage.app",
-  messagingSenderId: "178389819926",
-  appId: "1:178389819926:web:bd59c273641ab8530ccb37"
+  apiKey: "YOUR_API_KEY", // Replace
+  authDomain: "YOUR_AUTH_DOMAIN", // Replace
+  projectId: "YOUR_PROJECT_ID", // Replace
+  storageBucket: "YOUR_STORAGE_BUCKET", // Replace
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace
+  appId: "YOUR_APP_ID" // Replace
 };
 try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error("Firebase Init Error", e); alert("Could not initialize Firebase."); }
 const db = firebase.firestore();
@@ -93,68 +93,37 @@ function renderLastCompletedDay() {
     if (lastDayOfWeek === MVP_TECH_DAY || lastDayOfWeek === MVP_VS_DAY) { const mvpKey = lastDayOfWeek === MVP_TECH_DAY ? `${lastDateStr}_Mon` : `${lastDateStr}_Sun`; const selectedMvpId = currentSelectedMvps[mvpKey]; if (selectedMvpId) { const mvp = getMemberById(selectedMvpId); conductorName = mvp ? `${mvp.name} (MVP)` : `Selected MVP (ID: ${selectedMvpId})`; } else { conductorName = "(MVP not recorded?)"; } }
     else { const r4r5 = getMembersByRank('R4/R5'); if (r4r5.length > 0) { const c = r4r5[lastR4R5Index % r4r5.length]; conductorName = c ? `${c.name} (${c.rank})` : "Error R4/R5"; } else { conductorName = "No R4/R5"; } }
     lastCompletedConductorEl.textContent = conductorName;
-    const { vip: proposedVip } = calculateDailyAssignments(lastDateStr, lastR4R5Index, lastMemberIndex, lastSkippedVips, {});
-    if (proposedVip?.id && !proposedVip.id.startsWith('NO_') && !proposedVip.id.startsWith('ERROR_')) { const currentSkipped = state.rotationState.skippedVips || []; const wasJustSkipped = currentSkipped.includes(proposedVip.id) && !lastSkippedVips.includes(proposedVip.id); lastCompletedVipEl.textContent = `${proposedVip.name} (${proposedVip.rank}) ${wasJustSkipped ? '(Skipped)' : '(Accepted)'}`; }
-    else { lastCompletedVipEl.textContent = proposedVip?.name || "---"; }
+    // Determine proposed VIP and if they were skipped for the 'last completed' day
+    const { vip: proposedVip } = calculateDailyAssignments(lastDateStr, lastR4R5Index, lastMemberIndex, lastSkippedVips, {}); // Pass empty MVP map, irrelevant for VIP proposal
+    if (proposedVip?.id && !proposedVip.id.startsWith('NO_') && !proposedVip.id.startsWith('ERROR_')) {
+        const currentSkipped = state.rotationState.skippedVips || [];
+        // Was the VIP skipped? Check if they are now in the current skipped list but weren't before.
+        const wasJustSkipped = currentSkipped.includes(proposedVip.id) && !lastSkippedVips.includes(proposedVip.id);
+        lastCompletedVipEl.textContent = `${proposedVip.name} (${proposedVip.rank}) ${wasJustSkipped ? '(Skipped)' : '(Accepted)'}`;
+    } else { lastCompletedVipEl.textContent = proposedVip?.name || "---"; }
 }
 function render() { console.log("Rendering UI..."); const theme = localStorage.getItem('theme'); if (theme === 'dark') { document.body.classList.add('dark-mode'); themeToggleBtn.textContent = "Toggle Light Mode"; } else { document.body.classList.remove('dark-mode'); themeToggleBtn.textContent = "Toggle Dark Mode"; } renderMemberList(); renderSkippedVips(); renderCurrentDay(); renderSchedule(); renderStatistics(); renderLastCompletedDay(); undoAdvanceBtn.disabled = !state.previousRotationState; }
 
 // --- New/Updated Functions ---
 function handleMvpDropdownChange() { if (mvpSelectionArea.style.display === 'block') { const selVal = mvpSelect.value; const enable = selVal !== ""; console.log(`MVP Dropdown changed. Val: "${selVal}". Enable: ${enable}`); const vipEl = document.getElementById('current-vip'); const vipTxt = vipEl ? vipEl.textContent : ""; const vipOK = !(vipTxt.includes("No Members") || vipTxt.includes("Error")); vipAcceptedBtn.disabled = !enable || !vipOK; vipSkippedBtn.disabled = !enable || !vipOK; } else { vipAcceptedBtn.disabled = true; vipSkippedBtn.disabled = true; } }
 function populateAlternativeVipSelect() { alternativeVipSelect.innerHTML = '<option value="">-- No Alternative VIP --</option>'; const members = getMembersByRank('Member'); members.forEach(m => { if (!m?.id) return; const o = document.createElement('option'); o.value = m.id; o.textContent = `${m.name} (${m.rank})`; alternativeVipSelect.appendChild(o); }); }
-async function handleConfirmAlternativeVip() {
-     console.log("--- handleConfirmAlternativeVip START ---");
-     const alternativeVipId = alternativeVipSelect.value; // ID des ausgewählten Alternativ-VIPs
-     const originallySkippedVipId = alternativeVipArea.dataset.originalVipId;
-     const selectedMvpIdForToday = alternativeVipArea.dataset.selectedMvpId;
-
-     if (!originallySkippedVipId) { /* ... error check ... */ return; }
-
+async function handleConfirmAlternativeVip() { // Updated to include alternative VIP count
+     console.log("--- handleConfirmAlternativeVip START ---"); const alternativeVipId = alternativeVipSelect.value; const originallySkippedVipId = alternativeVipArea.dataset.originalVipId; const selectedMvpIdForToday = alternativeVipArea.dataset.selectedMvpId;
+     if (!originallySkippedVipId) { console.error("Original skipped VIP ID missing!"); return; }
      confirmAlternativeVipBtn.disabled = true; alternativeVipSelect.disabled = true; undoAdvanceBtn.disabled = true;
-
-     // Kopiere die aktuellen Zustände
-     const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const currentDayOfWeek = getDayOfWeek(currentDate);
-     const currentR4R5Index = state.rotationState.r4r5Index ?? 0; const currentMemberIndex = state.rotationState.memberIndex ?? 0;
-     const currentSkippedVips = [...(state.rotationState.skippedVips || [])].filter(id => getMemberById(id));
-     const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) };
-     const currentVipCounts = { ...(state.rotationState.vipCounts || {}) }; // VIP Counts kopieren
-     const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) };
-
-     // Originalen VIP zur Skipped-Liste hinzufügen (falls noch nicht drin)
+     const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const currentDayOfWeek = getDayOfWeek(currentDate); const currentR4R5Index = state.rotationState.r4r5Index ?? 0; const currentMemberIndex = state.rotationState.memberIndex ?? 0; const currentSkippedVips = [...(state.rotationState.skippedVips || [])].filter(id => getMemberById(id)); const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) }; const currentVipCounts = { ...(state.rotationState.vipCounts || {}) }; const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) };
      if (!currentSkippedVips.includes(originallySkippedVipId)) { currentSkippedVips.unshift(originallySkippedVipId); }
-
-     // MVP-Zähler erhöhen (falls MVP ausgewählt wurde)
+     // MVP Count Handling
      if (selectedMvpIdForToday) { const member = getMemberById(selectedMvpIdForToday); if (member) { currentMvpCounts[selectedMvpIdForToday] = (currentMvpCounts[selectedMvpIdForToday] || 0) + 1; console.log(`ConfirmAltVIP: MVP Count Inc: ${member.name} -> ${currentMvpCounts[selectedMvpIdForToday]}`); } else { console.warn(`ConfirmAltVIP: MVP ID ${selectedMvpIdForToday} not found`); } }
-
-     // --- NEU: VIP-Zähler für den *alternativen* VIP erhöhen ---
-     if (alternativeVipId) { // Nur wenn ein alternativer VIP ausgewählt wurde (nicht "-- No Alternative --")
-         const altVipMember = getMemberById(alternativeVipId);
-         if (altVipMember) {
-             currentVipCounts[alternativeVipId] = (currentVipCounts[alternativeVipId] || 0) + 1;
-             console.log(`ConfirmAltVIP: ALTERNATIVE VIP Count Inc: ${altVipMember.name} -> ${currentVipCounts[alternativeVipId]}`);
-         } else {
-             console.warn(`ConfirmAltVIP: Alternative VIP ID ${alternativeVipId} not found`);
-         }
-     }
-     // --- Ende NEU ---
-
-     // Nächsten Zustand berechnen (Indices, Datum)
-     let nextR4R5Index = currentR4R5Index; if (currentDayOfWeek >= 2 && currentDayOfWeek <= 6) { nextR4R5Index = (currentR4R5Index + 1); }
-     const nextDate = addDays(currentDate, 1); const nextDateStr = getISODateString(nextDate);
-
-     // Vorherigen Zustand für Undo speichern
+     // Alternative VIP Count Handling
+     if (alternativeVipId) { const altVipMember = getMemberById(alternativeVipId); if (altVipMember) { currentVipCounts[alternativeVipId] = (currentVipCounts[alternativeVipId] || 0) + 1; console.log(`ConfirmAltVIP: ALTERNATIVE VIP Count Inc: ${altVipMember.name} -> ${currentVipCounts[alternativeVipId]}`); } else { console.warn(`ConfirmAltVIP: Alternative VIP ID ${alternativeVipId} not found`); } }
+     // Calculate next state
+     let nextR4R5Index = currentR4R5Index; if (currentDayOfWeek >= 2 && currentDayOfWeek <= 6) { nextR4R5Index = (currentR4R5Index + 1); } const nextDate = addDays(currentDate, 1); const nextDateStr = getISODateString(nextDate);
      try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); console.log("Stored undo state."); } catch (e) { console.error("Undo store error:", e); state.previousRotationState = null; }
-
-     // Lokalen State aktualisieren
-     state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index;
-     state.rotationState.memberIndex = currentMemberIndex; // WICHTIG: MemberIndex NICHT erhöhen!
-     state.rotationState.skippedVips = currentSkippedVips; state.rotationState.selectedMvps = currentSelectedMvps;
-     state.rotationState.vipCounts = currentVipCounts; // Aktualisierte VIP Counts setzen
-     state.rotationState.mvpCounts = currentMvpCounts; // Aktualisierte MVP Counts setzen
-
+     // Update local state
+     state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index; state.rotationState.memberIndex = currentMemberIndex; state.rotationState.skippedVips = currentSkippedVips; state.rotationState.selectedMvps = currentSelectedMvps; state.rotationState.vipCounts = currentVipCounts; state.rotationState.mvpCounts = currentMvpCounts;
      console.log("Advancing day after skip. New local state:", JSON.parse(JSON.stringify(state.rotationState)));
-
-     // In Firestore speichern
+     // Save to Firestore
      try { await updateFirestoreState(); console.log("FS updated after alt VIP."); alternativeVipArea.style.display = 'none'; } catch (error) { console.error("Save fail after alt VIP:", error); alert("Error saving. Check console."); confirmAlternativeVipBtn.disabled = false; alternativeVipSelect.disabled = false; }
      console.log("--- handleConfirmAlternativeVip END ---");
 }
@@ -165,12 +134,26 @@ vipAcceptedBtn.addEventListener('click', () => handleVipAction(true)); console.l
 vipSkippedBtn.addEventListener('click', () => handleVipAction(false)); console.log("DEBUG: Listener vipSkippedBtn OK");
 mvpSelect.addEventListener('change', handleMvpDropdownChange); console.log("DEBUG: Listener mvpSelect OK");
 confirmAlternativeVipBtn.addEventListener('click', handleConfirmAlternativeVip); console.log("DEBUG: Listener confirmAlternativeVipBtn OK");
-async function handleVipAction(accepted) { /* --- Unchanged from v5 --- */ console.log(`--- handleVipAction START --- Accepted: ${accepted}`); if (!state.rotationState?.currentDate) { alert("State not loaded"); return; } const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const dayOfWeek = getDayOfWeek(currentDate); let selectedMvpId = null; if (dayOfWeek === MVP_TECH_DAY || dayOfWeek === MVP_VS_DAY) { const mvpKey = dayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`; const existingMvp = state.rotationState.selectedMvps?.[mvpKey]; if (!existingMvp) { selectedMvpId = mvpSelect.value; if (!selectedMvpId) { alert("Select MVP"); return; } } else { console.log("MVP already selected"); selectedMvpId = existingMvp; } } vipAcceptedBtn.disabled = true; vipSkippedBtn.disabled = true; undoAdvanceBtn.disabled = true; alternativeVipArea.style.display = 'none'; if (accepted) { try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); console.log("Stored prev state for undo."); } catch (e) { console.error("Undo store error:", e); state.previousRotationState = null; } console.log(`handleVipAction(Accept): MVP ID to pass: ${selectedMvpId}`); const success = advanceRotation(true, selectedMvpId); if (success) { console.log("handleVipAction(Accept): Saving state..."); try { await updateFirestoreState(); undoAdvanceBtn.disabled = !state.previousRotationState; console.log("handleVipAction(Accept): Save OK"); } catch (error) { console.error("handleVipAction(Accept): Save FAIL:", error); alert("Error saving. Check console!"); renderCurrentDay(); } } else { console.warn("handleVipAction(Accept): advanceRotation failed"); renderCurrentDay(); } } else { console.log("handleVipAction(Skip): Showing alternative VIP selection."); const { vip: proposedVip } = calculateDailyAssignments( currentDateStr, state.rotationState.r4r5Index ?? 0, state.rotationState.memberIndex ?? 0, state.rotationState.skippedVips || [], state.rotationState.selectedMvps || {} ); if (!proposedVip?.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) { alert("Cannot process skip: No valid VIP was proposed."); renderCurrentDay(); return; } alternativeVipArea.dataset.originalVipId = proposedVip.id; alternativeVipArea.dataset.selectedMvpId = selectedMvpId || ""; originalSkippedVipNameEl.textContent = proposedVip.name || "The proposed VIP"; populateAlternativeVipSelect(); alternativeVipArea.style.display = 'block'; confirmAlternativeVipBtn.disabled = false; alternativeVipSelect.disabled = false; } console.log("--- handleVipAction END ---"); }
-undoAdvanceBtn.addEventListener('click', async () => { /* --- Unchanged --- */ if (!state.previousRotationState) { alert("No undo state."); return; } if (confirm("Undo last advancement?")) { undoAdvanceBtn.disabled = true; try { if (typeof state.previousRotationState !== 'object' || state.previousRotationState === null) { throw new Error("Invalid undo data."); } state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState)); state.previousRotationState = null; console.log("Rolled back state:", JSON.parse(JSON.stringify(state.rotationState))); await updateFirestoreState(); console.log("FS updated after undo."); } catch (error) { console.error("Undo error:", error); alert("Undo error: " + error.message); } } }); console.log("DEBUG: Listener undoAdvanceBtn OK");
-themeToggleBtn.addEventListener('click', () => { /* --- Unchanged --- */ document.body.classList.toggle('dark-mode'); if (document.body.classList.contains('dark-mode')) { localStorage.setItem('theme', 'dark'); themeToggleBtn.textContent = "Toggle Light Mode"; } else { localStorage.setItem('theme', 'light'); themeToggleBtn.textContent = "Toggle Dark Mode"; } }); console.log("DEBUG: Listener themeToggleBtn OK");
-resetBtn.addEventListener('click', async () => { /* --- Unchanged --- */ if (confirm("!! WARNING !! Reset ALL data?")) { console.warn("Resetting data!"); resetBtn.disabled = true; const today = new Date(); const nextM = findNextMonday(today); const nextMStr = getISODateString(nextM); state.members = initialMembers.map(m => ({...m})); state.rotationState = { currentDate: nextMStr, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {} }; state.previousRotationState = null; try { await updateFirestoreState(); console.log("FS reset OK."); alert("Data reset."); } catch (error) { console.error("Reset error:", error); alert("Reset error."); resetBtn.disabled = false; } } }); console.log("DEBUG: Listener resetBtn OK");
+async function handleVipAction(accepted) { // Handles branching between Accept and Skip paths
+    console.log(`--- handleVipAction START --- Accepted: ${accepted}`); if (!state.rotationState?.currentDate) { alert("State not loaded"); return; }
+    const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const dayOfWeek = getDayOfWeek(currentDate); let selectedMvpId = null;
+    if (dayOfWeek === MVP_TECH_DAY || dayOfWeek === MVP_VS_DAY) { const mvpKey = dayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`; const existingMvp = state.rotationState.selectedMvps?.[mvpKey]; if (!existingMvp) { selectedMvpId = mvpSelect.value; if (!selectedMvpId) { alert("Select MVP"); return; } } else { console.log("MVP already selected"); selectedMvpId = existingMvp; } }
+    vipAcceptedBtn.disabled = true; vipSkippedBtn.disabled = true; undoAdvanceBtn.disabled = true; alternativeVipArea.style.display = 'none';
+    if (accepted) { // --- ACCEPT PATH ---
+        try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); console.log("Stored prev state for undo."); } catch (e) { console.error("Undo store error:", e); state.previousRotationState = null; }
+        console.log(`handleVipAction(Accept): MVP ID to pass: ${selectedMvpId}`); const success = advanceRotation(true, selectedMvpId);
+        if (success) { console.log("handleVipAction(Accept): Saving state..."); try { await updateFirestoreState(); undoAdvanceBtn.disabled = !state.previousRotationState; console.log("handleVipAction(Accept): Save OK"); } catch (error) { console.error("handleVipAction(Accept): Save FAIL:", error); alert("Error saving. Check console!"); renderCurrentDay(); } } else { console.warn("handleVipAction(Accept): advanceRotation failed"); renderCurrentDay(); }
+    } else { // --- SKIP PATH ---
+        console.log("handleVipAction(Skip): Showing alternative VIP selection."); const { vip: proposedVip } = calculateDailyAssignments( currentDateStr, state.rotationState.r4r5Index ?? 0, state.rotationState.memberIndex ?? 0, state.rotationState.skippedVips || [], state.rotationState.selectedMvps || {} ); if (!proposedVip?.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) { alert("Cannot process skip: No valid VIP was proposed."); renderCurrentDay(); return; }
+        alternativeVipArea.dataset.originalVipId = proposedVip.id; alternativeVipArea.dataset.selectedMvpId = selectedMvpId || ""; originalSkippedVipNameEl.textContent = proposedVip.name || "The proposed VIP";
+        populateAlternativeVipSelect(); alternativeVipArea.style.display = 'block'; confirmAlternativeVipBtn.disabled = false; alternativeVipSelect.disabled = false;
+    } console.log("--- handleVipAction END ---");
+}
+undoAdvanceBtn.addEventListener('click', async () => { if (!state.previousRotationState) { alert("No undo state."); return; } if (confirm("Undo last advancement?")) { undoAdvanceBtn.disabled = true; try { if (typeof state.previousRotationState !== 'object' || state.previousRotationState === null) { throw new Error("Invalid undo data."); } state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState)); state.previousRotationState = null; console.log("Rolled back state:", JSON.parse(JSON.stringify(state.rotationState))); await updateFirestoreState(); console.log("FS updated after undo."); } catch (error) { console.error("Undo error:", error); alert("Undo error: " + error.message); } } }); console.log("DEBUG: Listener undoAdvanceBtn OK");
+themeToggleBtn.addEventListener('click', () => { document.body.classList.toggle('dark-mode'); if (document.body.classList.contains('dark-mode')) { localStorage.setItem('theme', 'dark'); themeToggleBtn.textContent = "Toggle Light Mode"; } else { localStorage.setItem('theme', 'light'); themeToggleBtn.textContent = "Toggle Dark Mode"; } }); console.log("DEBUG: Listener themeToggleBtn OK");
+resetBtn.addEventListener('click', async () => { if (confirm("!! WARNING !! Reset ALL data?")) { console.warn("Resetting data!"); resetBtn.disabled = true; const today = new Date(); const nextM = findNextMonday(today); const nextMStr = getISODateString(nextM); state.members = initialMembers.map(m => ({...m})); state.rotationState = { currentDate: nextMStr, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {} }; state.previousRotationState = null; try { await updateFirestoreState(); console.log("FS reset OK."); alert("Data reset."); } catch (error) { console.error("Reset error:", error); alert("Reset error."); resetBtn.disabled = false; } } }); console.log("DEBUG: Listener resetBtn OK");
 
 // --- Initialization and Realtime Updates ---
-stateDocRef.onSnapshot((doc) => { /* --- Unchanged --- */ console.log("FS data received/updated."); let needsInitialSetup=false; let needsDateUpdate=false; if(doc.exists){ const data=doc.data(); console.log("Raw FS data:",data); const localPrev=state.previousRotationState; const loadedMembers=(data.members||[]).map(m=>({...m, id: m.id||generateId()})); const loadedRotState=data.rotationState||{}; state={ members:loadedMembers, rotationState:{ currentDate:loadedRotState.currentDate||null, r4r5Index:loadedRotState.r4r5Index??0, memberIndex:loadedRotState.memberIndex??0, skippedVips:loadedRotState.skippedVips||[], selectedMvps:loadedRotState.selectedMvps||{}, vipCounts:loadedRotState.vipCounts||{}, mvpCounts:loadedRotState.mvpCounts||{} }, previousRotationState:localPrev }; if(!state.rotationState.currentDate||isNaN(new Date(state.rotationState.currentDate+'T00:00:00Z'))){ console.warn("Loaded state missing/invalid date."); needsDateUpdate=true; } } else { console.log("No FS doc. Initial setup..."); needsInitialSetup=true; } if(needsInitialSetup||needsDateUpdate){ console.log(`Setup: Initial=${needsInitialSetup}, DateUpdate=${needsDateUpdate}`); const today=new Date(); const nextM=findNextMonday(today); const nextMStr=getISODateString(nextM); if(needsInitialSetup){ state={ members:initialMembers.map(m=>({...m})), rotationState:{currentDate:nextMStr, r4r5Index:0, memberIndex:0, skippedVips:[], selectedMvps:{}, vipCounts:{}, mvpCounts:{}}, previousRotationState:null }; console.log("Init state, date:", nextMStr); updateFirestoreState().catch(err=>console.error("Initial save FAIL:", err)); } else if(needsDateUpdate){ state.rotationState.currentDate=nextMStr; console.log("Updating date to:", nextMStr); updateFirestoreState().catch(err=>console.error("Date update save FAIL:", err)); } } console.log("Final local state:", JSON.parse(JSON.stringify(state))); render(); resetBtn.disabled=false; }, (error) => { console.error("FS Listener ERROR:", error); alert(`FATAL DB ERROR (${error.message}). Check connection, config, rules, console.`); document.getElementById('vip-actions').style.display='none'; document.getElementById('member-manager').style.pointerEvents='none'; document.getElementById('member-manager').style.opacity='0.5'; currentDateEl.textContent="DB Error"; resetBtn.disabled=true; undoAdvanceBtn.disabled=true; });
+stateDocRef.onSnapshot((doc) => { console.log("FS data received/updated."); let needsInitialSetup=false; let needsDateUpdate=false; if(doc.exists){ const data=doc.data(); console.log("Raw FS data:",data); const localPrev=state.previousRotationState; const loadedMembers=(data.members||[]).map(m=>({...m, id: m.id||generateId()})); const loadedRotState=data.rotationState||{}; state={ members:loadedMembers, rotationState:{ currentDate:loadedRotState.currentDate||null, r4r5Index:loadedRotState.r4r5Index??0, memberIndex:loadedRotState.memberIndex??0, skippedVips:loadedRotState.skippedVips||[], selectedMvps:loadedRotState.selectedMvps||{}, vipCounts:loadedRotState.vipCounts||{}, mvpCounts:loadedRotState.mvpCounts||{} }, previousRotationState:localPrev }; if(!state.rotationState.currentDate||isNaN(new Date(state.rotationState.currentDate+'T00:00:00Z'))){ console.warn("Loaded state missing/invalid date."); needsDateUpdate=true; } } else { console.log("No FS doc. Initial setup..."); needsInitialSetup=true; } if(needsInitialSetup||needsDateUpdate){ console.log(`Setup: Initial=${needsInitialSetup}, DateUpdate=${needsDateUpdate}`); const today=new Date(); const nextM=findNextMonday(today); const nextMStr=getISODateString(nextM); if(needsInitialSetup){ state={ members:initialMembers.map(m=>({...m})), rotationState:{currentDate:nextMStr, r4r5Index:0, memberIndex:0, skippedVips:[], selectedMvps:{}, vipCounts:{}, mvpCounts:{}}, previousRotationState:null }; console.log("Init state, date:", nextMStr); updateFirestoreState().catch(err=>console.error("Initial save FAIL:", err)); } else if(needsDateUpdate){ state.rotationState.currentDate=nextMStr; console.log("Updating date to:", nextMStr); updateFirestoreState().catch(err=>console.error("Date update save FAIL:", err)); } } console.log("Final local state:", JSON.parse(JSON.stringify(state))); render(); resetBtn.disabled=false; }, (error) => { console.error("FS Listener ERROR:", error); alert(`FATAL DB ERROR (${error.message}). Check connection, config, rules, console.`); document.getElementById('vip-actions').style.display='none'; /* ... disable more UI on error ... */ });
 // --- Initial Theme Render ---
 (() => { const theme=localStorage.getItem('theme'); if(theme==='dark'){ document.body.classList.add('dark-mode'); themeToggleBtn.textContent="Toggle Light Mode"; } else { document.body.classList.remove('dark-mode'); themeToggleBtn.textContent="Toggle Dark Mode"; } })();
