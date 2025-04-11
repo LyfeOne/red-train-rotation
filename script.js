@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "1.9"; // Oder deine gewünschte Version
+const SCRIPT_VERSION = "2.0"; // Oder deine gewünschte Version
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
