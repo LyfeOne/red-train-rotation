@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>[rEd] Train Conductor Rotation - S749 (v1)</title>
+    <title>[rEd] Train Conductor Rotation - S749 (v2) - DEBUG</title>
     <style>
         /* Basic Reset & Root Variables */
         :root {
@@ -393,7 +393,7 @@
     <div class="container">
         <header class="header">
             <h1>[rEd] Dead Redemption - Train Conductor Rotation</h1>
-            <p>Server #749 (Shared)</p>
+            <p>Server #749 (v2)</p>
         </header>
 
         <!-- Current Day and Controls -->
@@ -544,7 +544,7 @@
 
         // --- Initial Data (Only used if Firestore is empty on first load) ---
          const initialMembers = [
-            // Using the list from the prompt, adding IDs
+             // Using the list from the prompt, adding IDs
             { name: "Motherfrogger", rank: "R5"}, { name: "Enyaisrave", rank: "R4"}, { name: "Johcar", rank: "R4"},
             { name: "DaVinnie", rank: "R4"}, { name: "CornFlakes", rank: "R4"}, { name: "Lyfe", rank: "R4"},
             { name: "LadyLaik", rank: "R4"}, { name: "Pabs64", rank: "R4"}, { name: "Supersebb", rank: "R4"},
@@ -693,7 +693,7 @@
         }
 
         function advanceRotation(vipAccepted, selectedMvpId = null) {
-            console.log('Advancing Rotation - VIP Accepted:', vipAccepted, 'Selected MVP:', selectedMvpId);
+            console.log(`--- advanceRotation START --- VIP Accepted: ${vipAccepted}, MVP ID: ${selectedMvpId}`); // DEBUG
             if (!state.rotationState || !state.rotationState.currentDate) {
                  console.error("Cannot advance rotation: state or currentDate is missing.");
                  return false; // Indicate failure
@@ -768,6 +768,7 @@
 
              // Store selected MVP and increment count if provided for today
              if (selectedMvpId) {
+                  console.log(`advanceRotation: Processing MVP ID: ${selectedMvpId}`); // DEBUG
                  const member = getMemberById(selectedMvpId);
                  if (member) { // Check if member exists
                      const mvpKeyBase = currentDayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`;
@@ -792,7 +793,7 @@
             state.rotationState.vipCounts = currentVipCounts; // Update counts
             state.rotationState.mvpCounts = currentMvpCounts; // Update counts
 
-            console.log("Local state advanced. New State:", JSON.parse(JSON.stringify(state.rotationState)));
+            console.log("--- advanceRotation END --- Returning true. Final local state before save:", JSON.parse(JSON.stringify(state.rotationState))); // DEBUG
             return true; // Indicate success
         }
 
@@ -1273,8 +1274,10 @@
         vipSkippedBtn.addEventListener('click', () => handleVipAction(false));
 
         async function handleVipAction(accepted) { // Make async to await Firestore update
+            console.log(`--- handleVipAction START --- Accepted: ${accepted}`); // DEBUG
             if (!state.rotationState || !state.rotationState.currentDate) {
                  alert("Rotation state not loaded yet. Please wait.");
+                 console.log("--- handleVipAction END (State not loaded) ---"); // DEBUG
                  return;
              }
 
@@ -1291,6 +1294,7 @@
                      selectedMvpId = mvpSelect.value;
                      if (!selectedMvpId) {
                          alert("Please select the MVP Conductor for today using the dropdown.");
+                         console.log("--- handleVipAction END (MVP not selected) ---"); // DEBUG
                          return; // Stop processing
                      }
                  } else {
@@ -1312,30 +1316,30 @@
                  state.previousRotationState = null; // Clear if error
              }
 
-
-            // Advance the local state
+            console.log(`handleVipAction: MVP ID to pass: ${selectedMvpId}`); // DEBUG
+            console.log("handleVipAction: Calling advanceRotation..."); // DEBUG
             const success = advanceRotation(accepted, selectedMvpId);
+            console.log(`handleVipAction: advanceRotation returned: ${success}`); // DEBUG
 
             if (success) {
+                console.log("handleVipAction: Attempting to save state to Firestore..."); // DEBUG
                 // Push the *new* state to Firestore and wait for it to complete
                  try {
                      await updateFirestoreState();
                      // Re-enable undo button *only after successful save*
                      undoAdvanceBtn.disabled = !state.previousRotationState;
-                     console.log("Firestore update successful after VIP action.");
+                     console.log("handleVipAction: Firestore update successful."); // DEBUG
                  } catch (error) {
-                     console.error("Failed to save state after VIP action:", error);
-                     alert("Error saving the changes. The rotation might not have advanced correctly. Please check the state or try again.");
-                     // Rollback local state changes if save fails? Complicated.
-                     // For now, just log the error. The listener *should* eventually get the old state back.
-                     // Re-enable buttons so user can try again (maybe?)
-                      // renderCurrentDay(); // Re-render to potentially re-enable buttons based on old state
+                     console.error("handleVipAction: Firestore update FAILED:", error); // DEBUG WICHTIG
+                     alert("Error saving the changes. The rotation might not have advanced correctly. Please check the console!");
+                     // Consider re-enabling buttons here if save fails
+                      renderCurrentDay(); // Re-enable buttons based on likely unchanged state
                  }
             } else {
-                // Advancement failed (e.g., no valid VIP), re-render to show current state/enable buttons
-                 console.warn("advanceRotation failed, re-rendering current day.");
-                 renderCurrentDay(); // Re-enable buttons based on current (unchanged) state
+                console.warn("handleVipAction: advanceRotation failed, re-rendering current day.");
+                renderCurrentDay(); // Re-enable buttons based on current (unchanged) state
             }
+             console.log("--- handleVipAction END ---"); // DEBUG
              // The UI will re-render automatically via the Firestore listener eventually,
              // but renderCurrentDay() was called above if needed, and undo button handled.
         }
