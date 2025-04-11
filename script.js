@@ -1,11 +1,11 @@
 // --- Firebase Configuration ---
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // Replace
-  authDomain: "YOUR_AUTH_DOMAIN", // Replace
-  projectId: "YOUR_PROJECT_ID", // Replace
-  storageBucket: "YOUR_STORAGE_BUCKET", // Replace
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace
-  appId: "YOUR_APP_ID" // Replace
+  apiKey: "AIzaSyAT8L9vDqFHyGB-MybtcLEBgCALuNflTZY",
+  authDomain: "red-train-rotation-tool.firebaseapp.com",
+  projectId: "red-train-rotation-tool",
+  storageBucket: "red-train-rotation-tool.firebasestorage.app",
+  messagingSenderId: "178389819926",
+  appId: "1:178389819926:web:bd59c273641ab8530ccb37"
 };
 try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error("Firebase Init Error", e); alert("Could not initialize Firebase."); }
 const db = firebase.firestore();
