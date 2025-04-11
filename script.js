@@ -96,7 +96,8 @@ function renderLastCompletedDay() {
         if (selectedMvpId) { const mvp = getMemberById(selectedMvpId); conductorName = mvp ? `${mvp.name} (MVP)` : `Selected MVP (ID: ${selectedMvpId})`; }
         else {
              conductorName = "(MVP not recorded?)";
-             console.warn(`renderLastCompletedDay: MVP ID for key ${mvpKey} on date ${lastDateStr} not found in current state.selectedMvps:`, JSON.parse(JSON.stringify(currentSelectedMvps))); // DEBUG LOG ADDED
+             // Log only if MVP was expected but not found
+             console.warn(`renderLastCompletedDay: MVP ID for key ${mvpKey} on date ${lastDateStr} not found in current state.selectedMvps:`, JSON.parse(JSON.stringify(currentSelectedMvps)));
          }
     } else { const r4r5 = getMembersByRank('R4/R5'); if (r4r5.length > 0) { const c = r4r5[lastR4R5Index % r4r5.length]; conductorName = c ? `${c.name} (${c.rank})` : "Error R4/R5"; } else { conductorName = "No R4/R5"; } }
     lastCompletedConductorEl.textContent = conductorName;
@@ -109,22 +110,31 @@ function render() { console.log("Rendering UI..."); const theme = localStorage.g
 // --- New/Updated Functions ---
 function handleMvpDropdownChange() { if (mvpSelectionArea.style.display === 'block') { const selVal = mvpSelect.value; const enable = selVal !== ""; console.log(`MVP Dropdown changed. Val: "${selVal}". Enable: ${enable}`); const vipEl = document.getElementById('current-vip'); const vipTxt = vipEl ? vipEl.textContent : ""; const vipOK = !(vipTxt.includes("No Members") || vipTxt.includes("Error")); vipAcceptedBtn.disabled = !enable || !vipOK; vipSkippedBtn.disabled = !enable || !vipOK; } else { vipAcceptedBtn.disabled = true; vipSkippedBtn.disabled = true; } }
 function populateAlternativeVipSelect() { alternativeVipSelect.innerHTML = '<option value="">-- No Alternative VIP --</option>'; const members = getMembersByRank('Member'); members.forEach(m => { if (!m?.id) return; const o = document.createElement('option'); o.value = m.id; o.textContent = `${m.name} (${m.rank})`; alternativeVipSelect.appendChild(o); }); }
-async function handleConfirmAlternativeVip() { // Updated to count alternative VIP
+async function handleConfirmAlternativeVip() { // Corrected to store selected MVP ID
      console.log("--- handleConfirmAlternativeVip START ---"); const alternativeVipId = alternativeVipSelect.value; const originallySkippedVipId = alternativeVipArea.dataset.originalVipId; const selectedMvpIdForToday = alternativeVipArea.dataset.selectedMvpId;
      if (!originallySkippedVipId) { console.error("Original skipped VIP ID missing!"); return; }
      confirmAlternativeVipBtn.disabled = true; alternativeVipSelect.disabled = true; undoAdvanceBtn.disabled = true;
-     const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const currentDayOfWeek = getDayOfWeek(currentDate); const currentR4R5Index = state.rotationState.r4r5Index ?? 0; const currentMemberIndex = state.rotationState.memberIndex ?? 0; const currentSkippedVips = [...(state.rotationState.skippedVips || [])].filter(id => getMemberById(id)); const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) }; const currentVipCounts = { ...(state.rotationState.vipCounts || {}) }; const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) };
+     const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const currentDayOfWeek = getDayOfWeek(currentDate); const currentR4R5Index = state.rotationState.r4r5Index ?? 0; const currentMemberIndex = state.rotationState.memberIndex ?? 0; const currentSkippedVips = [...(state.rotationState.skippedVips || [])].filter(id => getMemberById(id));
+     const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) }; // Copy existing map
+     const currentVipCounts = { ...(state.rotationState.vipCounts || {}) }; const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) };
      if (!currentSkippedVips.includes(originallySkippedVipId)) { currentSkippedVips.unshift(originallySkippedVipId); }
-     // MVP Count Handling
-     if (selectedMvpIdForToday) { const member = getMemberById(selectedMvpIdForToday); if (member) { currentMvpCounts[selectedMvpIdForToday] = (currentMvpCounts[selectedMvpIdForToday] || 0) + 1; console.log(`ConfirmAltVIP: MVP Count Inc: ${member.name} -> ${currentMvpCounts[selectedMvpIdForToday]}`); } else { console.warn(`ConfirmAltVIP: MVP ID ${selectedMvpIdForToday} not found`); } }
-     // Alternative VIP Count Handling (Count the Alt VIP)
+     // MVP Count Handling AND Map Update
+     if (selectedMvpIdForToday) { const member = getMemberById(selectedMvpIdForToday); if (member) {
+         currentMvpCounts[selectedMvpIdForToday] = (currentMvpCounts[selectedMvpIdForToday] || 0) + 1; console.log(`ConfirmAltVIP: MVP Count Inc: ${member.name} -> ${currentMvpCounts[selectedMvpIdForToday]}`);
+         // --- Correction: Store MVP ID in the map ---
+         const mvpKey = currentDayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`;
+         currentSelectedMvps[mvpKey] = selectedMvpIdForToday; console.log(`ConfirmAltVIP: Storing MVP ID ${selectedMvpIdForToday} for key ${mvpKey}`);
+         // --- End Correction ---
+      } else { console.warn(`ConfirmAltVIP: MVP ID ${selectedMvpIdForToday} not found`); } }
+     // Alternative VIP Count Handling
      if (alternativeVipId) { const altVipMember = getMemberById(alternativeVipId); if (altVipMember) { currentVipCounts[alternativeVipId] = (currentVipCounts[alternativeVipId] || 0) + 1; console.log(`ConfirmAltVIP: ALTERNATIVE VIP Count Inc: ${altVipMember.name} -> ${currentVipCounts[alternativeVipId]}`); } else { console.warn(`ConfirmAltVIP: Alternative VIP ID ${alternativeVipId} not found`); } }
      // Calculate next state
      let nextR4R5Index = currentR4R5Index; if (currentDayOfWeek >= 2 && currentDayOfWeek <= 6) { nextR4R5Index = (currentR4R5Index + 1); } const nextDate = addDays(currentDate, 1); const nextDateStr = getISODateString(nextDate);
      try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); console.log("Stored undo state."); } catch (e) { console.error("Undo store error:", e); state.previousRotationState = null; }
      // Update local state
-     state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index; state.rotationState.memberIndex = currentMemberIndex; // Keep same Member index
-     state.rotationState.skippedVips = currentSkippedVips; state.rotationState.selectedMvps = currentSelectedMvps; state.rotationState.vipCounts = currentVipCounts; // Set updated VIP counts
+     state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index; state.rotationState.memberIndex = currentMemberIndex; state.rotationState.skippedVips = currentSkippedVips;
+     state.rotationState.selectedMvps = currentSelectedMvps; // Set updated MVP Map
+     state.rotationState.vipCounts = currentVipCounts; // Set updated VIP counts
      state.rotationState.mvpCounts = currentMvpCounts; // Set updated MVP counts
      console.log("Advancing day after skip. New local state:", JSON.parse(JSON.stringify(state.rotationState)));
      // Save to Firestore
