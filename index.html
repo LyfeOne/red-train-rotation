@@ -114,7 +114,7 @@
              font-size: 1.8em;
              color: var(--primary-color);
         }
-        .controls-section, .member-section, .schedule-section, .skipped-section, .admin-section {
+        .controls-section, .member-section, .schedule-section, .skipped-section, .stats-section, .admin-section {
             margin-bottom: 30px;
             padding: 15px;
             background-color: var(--bg-color); /* Slightly different bg for sections */
@@ -205,7 +205,15 @@
              margin-right: 10px;
              word-break: break-word; /* Prevent long names breaking layout */
         }
-        .rank-badge {
+
+        /* Member List specific styling */
+        #member-list li .member-info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1; /* Allow name and rank select to take space */
+            margin-right: 10px; /* Space before remove button */
+        }
+        .rank-badge { /* Kept for potential future use, but replaced by select */
             font-size: 0.8em;
             padding: 2px 6px;
             border-radius: 3px;
@@ -214,7 +222,20 @@
             background-color: var(--accent-color);
             white-space: nowrap;
         }
-        .rank-R5 { background-color: #dc3545; }
+        .rank-select-inline {
+            /* Style the inline rank selector */
+            display: inline-block;
+            width: auto; /* Adjust width */
+            padding: 2px 5px;
+            margin-left: 8px;
+            font-size: 0.9em;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--input-border);
+            border-radius: 3px;
+            vertical-align: middle; /* Align nicely with the text */
+        }
+        .rank-R5 { background-color: #dc3545; } /* Might still be used for badges elsewhere */
         .rank-R4 { background-color: #ffc107; color: #333; }
         .rank-Member { background-color: #17a2b8; }
 
@@ -262,6 +283,50 @@
             justify-content: flex-start; /* Align name to the left */
         }
 
+        /* Statistics Section */
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 20px; /* Space between MVP and VIP lists */
+        }
+        #mvp-stats, #vip-stats {
+            flex: 1; /* Each takes up half the space */
+            min-width: 200px; /* Minimum width before wrapping */
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--card-bg); /* Match card background */
+        }
+        #mvp-stats h3, #vip-stats h3 {
+             font-size: 1.1em;
+             margin-bottom: 10px;
+             color: var(--primary-color);
+             border-bottom: 1px solid var(--border-color);
+             padding-bottom: 5px;
+        }
+        #mvp-stats ul, #vip-stats ul {
+            list-style: none;
+            padding: 0;
+            max-height: 300px; /* Prevent super long lists */
+            overflow-y: auto; /* Add scroll if needed */
+        }
+         #mvp-stats li, #vip-stats li {
+             padding: 5px 0;
+             border-bottom: 1px dashed var(--border-color);
+             display: flex;
+             justify-content: space-between;
+             font-size: 0.9em;
+         }
+        #mvp-stats li:last-child, #vip-stats li:last-child {
+             border-bottom: none;
+         }
+         .stats-count {
+             font-weight: bold;
+             margin-left: 10px;
+             min-width: 20px; /* Ensure space for count */
+             text-align: right;
+         }
+
         /* Theme Toggle */
         .theme-toggle {
             position: fixed;
@@ -299,7 +364,9 @@
 
             li { flex-direction: column; align-items: flex-start; }
             li span { margin-bottom: 5px; }
-            .member-actions { margin-top: 5px; } /* Space below name/rank */
+            #member-list li { flex-direction: row; align-items: center; } /* Keep member list items horizontal */
+            #member-list li .member-info { margin-bottom: 0; }
+            .member-actions { margin-top: 5px; margin-left: auto; } /* Push remove btn to right */
         }
          @media (max-width: 480px) {
               h1 { font-size: 1.3em; }
@@ -308,12 +375,13 @@
                   grid-template-columns: 65px auto; /* Smaller date column */
                }
                .schedule-date { font-size: 0.9em; }
+               #member-list li { flex-direction: column; align-items: flex-start; } /* Stack on very small screens */
+               .member-actions { margin-left: 0; }
          }
 
     </style>
 
     <!-- Firebase Libraries -->
-    <!-- Using compatibility libraries for easier transition from v8 style -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
 
@@ -352,7 +420,6 @@
                      <button id="vip-skipped" class="btn-secondary btn-vip-action">No, VIP Skipped</button>
                 </div>
                  <div id="advance-controls" style="margin-top: 15px;">
-                    <!-- Removed explicit advance button, actions trigger advance -->
                     <button id="undo-advance" class="btn-secondary">Undo Last Advancement</button>
                  </div>
             </div>
@@ -404,6 +471,21 @@
             </div>
         </section>
 
+        <!-- Statistics Section -->
+        <section class="stats-section">
+            <h2>Statistics</h2>
+            <div class="stats-container">
+                <div id="mvp-stats">
+                    <h3>MVP Counts</h3>
+                    <ul><!-- MVP counts will be listed here --></ul>
+                </div>
+                <div id="vip-stats">
+                    <h3>VIP Counts</h3>
+                    <ul><!-- VIP counts will be listed here --></ul>
+                </div>
+            </div>
+        </section>
+
         <!-- Admin Controls -->
         <section class="admin-section">
             <h2>Admin</h2>
@@ -416,29 +498,35 @@
     <script>
         // --- Firebase Configuration ---
         // IMPORTANT: Replace placeholders with your actual Firebase project config!
+        // Make sure Firestore is enabled in your Firebase project.
+        // Make sure Firestore Security Rules allow read/write access to the 'rotationState/s749_state' document.
         const firebaseConfig = {
-  apiKey: "AIzaSyAT8L9vDqFHyGB-MybtcLEBgCALuNflTZY",
-  authDomain: "red-train-rotation-tool.firebaseapp.com",
-  projectId: "red-train-rotation-tool",
-  storageBucket: "red-train-rotation-tool.firebasestorage.app",
-  messagingSenderId: "178389819926",
-  appId: "1:178389819926:web:bd59c273641ab8530ccb37"
-};
+          apiKey: "AIzaSyAT8L9vDqFHyGB-MybtcLEBgCALuNflTZY", // Replace
+          authDomain: "red-train-rotation-tool.firebaseapp.com", // Replace
+          projectId: "red-train-rotation-tool", // Replace
+          storageBucket: "red-train-rotation-tool.firebasestorage.app", // Replace
+          messagingSenderId: "178389819926", // Replace
+          appId: "1:178389819926:web:bd59c273641ab8530ccb37" // Replace
+        };
 
         // --- Initialize Firebase (using Compat libraries) ---
-        firebase.initializeApp(firebaseConfig);
+        try {
+             firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+             console.error("Error initializing Firebase. Is the config correct?", e);
+             alert("Could not initialize Firebase. Check configuration and console.");
+        }
         const db = firebase.firestore(); // Get Firestore instance
 
         // --- Firestore Document Reference ---
-        // Stores the entire state in one document for simplicity.
-        // Ensure Firestore rules allow access to this path.
         const stateDocRef = db.collection("rotationState").doc("s749_state");
 
         // --- Constants and State ---
         const MVP_TECH_DAY = 1; // Monday
         const MVP_VS_DAY = 0;   // Sunday
+        const RANKS = ["Member", "R4", "R5"]; // Define ranks for dropdown
 
-        // Local state object - This will be overwritten by Firestore data on load/update
+        // Local state object - Overwritten by Firestore data on load/update
         let state = {
             members: [],
             rotationState: {
@@ -447,6 +535,8 @@
                 memberIndex: 0,
                 skippedVips: [], // Array of member IDs
                 selectedMvps: {}, // Key: "YYYY-MM-DD_Sun" or "YYYY-MM-DD_Mon", Value: memberId
+                vipCounts: {},    // { memberId: count } - NEW
+                mvpCounts: {}     // { memberId: count } - NEW
             },
             // previousRotationState is managed *only* locally in browser memory for undo
             previousRotationState: null
@@ -454,10 +544,11 @@
 
         // --- Initial Data (Only used if Firestore is empty on first load) ---
          const initialMembers = [
+            // Using the list from the prompt, adding IDs
             { name: "Motherfrogger", rank: "R5"}, { name: "Enyaisrave", rank: "R4"}, { name: "Johcar", rank: "R4"},
             { name: "DaVinnie", rank: "R4"}, { name: "CornFlakes", rank: "R4"}, { name: "Lyfe", rank: "R4"},
             { name: "LadyLaik", rank: "R4"}, { name: "Pabs64", rank: "R4"}, { name: "Supersebb", rank: "R4"},
-            { name: "Munky", rank: "R4"}, { name: "NymbleV", rank: "R4"}, { name: "R1/R2/R3 Team", rank: "Member"},
+            { name: "Munky", rank: "R4"}, { name: "NymbleV", rank: "R4"}, { name: "R1/R2/R3 Team", rank: "Member"}, // Included from your code example
             { name: "Smugwell", rank: "Member"}, { name: "MRAN", rank: "Member"}, { name: "Chris", rank: "Member"},
             { name: "Leka98", rank: "Member"}, { name: "Darkknight", rank: "Member"}, { name: "Rikkyyyyy", rank: "Member"},
             { name: "Gekkegerrittttt", rank: "Member"}, { name: "Ever4", rank: "Member"}, { name: "KFCPov3r", rank: "Member"},
@@ -482,6 +573,7 @@
             { name: "Bekim1", rank: "Member"}, { name: "Edx777", rank: "Member"}, { name: "Laeta", rank: "Member"},
             { name: "Kyuchie", rank: "Member"}, { name: "depechefann", rank: "Member"}, { name: "BlackPush", rank: "Member"},
             { name: "Gunnovic", rank: "Member"}, { name: "NinoDelBono", rank: "Member"}, { name: "Dario217", rank: "Member"}
+            // Add any other members from the original prompt if needed
         ].map(m => ({ ...m, id: generateId() })); // Add unique IDs
 
         // --- DOM Elements ---
@@ -498,97 +590,69 @@
         const scheduleDisplayListEl = document.getElementById('schedule-display').querySelector('ul');
         const vipAcceptedBtn = document.getElementById('vip-accepted');
         const vipSkippedBtn = document.getElementById('vip-skipped');
-        // const advanceDayBtn = document.getElementById('advance-day'); // Removed
         const undoAdvanceBtn = document.getElementById('undo-advance');
         const mvpSelectionArea = document.getElementById('mvp-selection-area');
         const mvpSelect = document.getElementById('mvp-select');
         const themeToggleBtn = document.getElementById('theme-toggle');
         const resetBtn = document.getElementById('reset-data');
-        // Removed export/import buttons and related elements
+        const mvpStatsListEl = document.getElementById('mvp-stats').querySelector('ul'); // New for stats
+        const vipStatsListEl = document.getElementById('vip-stats').querySelector('ul'); // New for stats
+
 
         // --- Utility Functions ---
-        function generateId() {
-            // Simple ID generator
-            return Math.random().toString(36).substring(2, 15);
-        }
-
-        function getDayOfWeek(date) { // 0 = Sunday, 1 = Monday, ...
-            return date.getDay();
-        }
-
+        function generateId() { return Math.random().toString(36).substring(2, 15); }
+        function getDayOfWeek(date) { return date.getDay(); } // 0 = Sunday
         function formatDate(date) {
-             // Ensure date is a Date object
-             if (!(date instanceof Date) || isNaN(date)) {
-                  return "Invalid Date"; // Handle potential errors
-             }
+             if (!(date instanceof Date) || isNaN(date)) return "Invalid Date";
             return date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
         }
-
         function getISODateString(date) {
-             // Ensure date is a Date object
              if (!(date instanceof Date) || isNaN(date)) {
                  console.error("getISODateString received invalid date:", date);
-                 // Return today's date as a fallback, or handle error appropriately
-                 return new Date().toISOString().split('T')[0];
+                 return new Date().toISOString().split('T')[0]; // Fallback to today
              }
             return date.toISOString().split('T')[0];
         }
-
         function addDays(date, days) {
             const result = new Date(date);
             result.setDate(result.getDate() + days);
             return result;
         }
-
         function findNextMonday(date) {
             const currentDay = getDayOfWeek(date);
-            // If today is Monday (1), add 7 days. If Sunday (0), add 1 day. etc.
             const daysUntilMonday = (8 - currentDay) % 7;
-            // Handle case where today *is* Monday, start *next* Monday
             const daysToAdd = daysUntilMonday === 0 ? 7 : daysUntilMonday;
             return addDays(date, daysToAdd);
         }
-
         function getMemberById(id) {
-             // Ensure state.members is an array before searching
-             if (!Array.isArray(state.members)) {
-                 console.error("state.members is not an array in getMemberById");
-                 return null;
-             }
-            return state.members.find(m => m.id === id);
+             if (!Array.isArray(state.members)) return null;
+            return state.members.find(m => m && m.id === id); // Added check for m existence
         }
-
         function getMembersByRank(rank) {
-             // Ensure state.members is an array before filtering
-             if (!Array.isArray(state.members)) {
-                 console.error("state.members is not an array in getMembersByRank");
-                 return [];
-             }
+             if (!Array.isArray(state.members)) return [];
              if (rank === 'R4/R5') {
-                return state.members.filter(m => m.rank === 'R4' || m.rank === 'R5');
+                return state.members.filter(m => m && (m.rank === 'R4' || m.rank === 'R5'));
              }
-            return state.members.filter(m => m.rank === rank);
+            return state.members.filter(m => m && m.rank === rank);
         }
 
-        // --- Core Logic Functions (Mostly Unchanged) ---
+        // --- Core Logic Functions ---
         function calculateDailyAssignments(targetDateStr, currentR4R5Index, currentMemberIndex, currentSkippedVips, selectedMvpsMap) {
-            // Ensure parameters are valid before proceeding
-             if (!targetDateStr || typeof currentR4R5Index !== 'number' || typeof currentMemberIndex !== 'number' || !Array.isArray(currentSkippedVips) || typeof selectedMvpsMap !== 'object') {
-                console.error("Invalid parameters passed to calculateDailyAssignments", {targetDateStr, currentR4R5Index, currentMemberIndex, currentSkippedVips, selectedMvpsMap});
-                return { date: new Date(), conductor: { id: 'ERROR_PARAMS', name: 'Invalid Input Error', rank: 'System' }, vip: { id: 'ERROR_PARAMS', name: 'Invalid Input Error', rank: 'System' } };
-             }
+            // Basic parameter validation
+            if (!targetDateStr || typeof currentR4R5Index !== 'number' || typeof currentMemberIndex !== 'number' || !Array.isArray(currentSkippedVips) || typeof selectedMvpsMap !== 'object') {
+                console.error("Invalid parameters in calculateDailyAssignments");
+                return { date: new Date(), conductor: { id: 'ERROR_PARAMS', name: 'Invalid Input', rank: 'System' }, vip: { id: 'ERROR_PARAMS', name: 'Invalid Input', rank: 'System' } };
+            }
 
             const targetDate = new Date(targetDateStr + 'T00:00:00Z'); // Use UTC
-             if (isNaN(targetDate)) { // Check if date parsing failed
+            if (isNaN(targetDate)) {
                  console.error("Invalid date string for calculation:", targetDateStr);
-                 return { date: new Date(), conductor: { id: 'ERROR_DATE', name: 'Invalid Date Error', rank: 'System' }, vip: { id: 'ERROR_DATE', name: 'Invalid Date Error', rank: 'System' } };
-             }
-
+                 return { date: new Date(), conductor: { id: 'ERROR_DATE', name: 'Invalid Date', rank: 'System' }, vip: { id: 'ERROR_DATE', name: 'Invalid Date', rank: 'System' } };
+            }
             const dayOfWeek = getDayOfWeek(targetDate);
 
             let conductor = null;
             let vip = null;
-
             const r4r5Members = getMembersByRank('R4/R5');
             const memberMembers = getMembersByRank('Member');
 
@@ -603,92 +667,98 @@
                  conductor = selectedMvpId ? getMemberById(selectedMvpId) : { id: 'MVP_SUN_SELECT', name: 'VS MVP Selection Required', rank: 'MVP' };
             } else { // Tuesday - Saturday
                 if (r4r5Members.length > 0) {
-                    const conductorIndex = currentR4R5Index % r4r5Members.length;
-                    conductor = r4r5Members[conductorIndex];
+                    conductor = r4r5Members[currentR4R5Index % r4r5Members.length];
                 } else {
                     conductor = { id: 'NO_R4R5', name: 'No R4/R5 Available', rank: 'System' };
                 }
             }
 
             // Determine VIP (Member)
-            if (memberMembers.length > 0) {
-                const validSkippedVips = currentSkippedVips.filter(id => getMemberById(id)); // Filter out removed members
-                if (validSkippedVips.length > 0) {
-                    vip = getMemberById(validSkippedVips[0]); // Offer to the first valid skipped VIP
-                } else {
-                    const vipIndex = currentMemberIndex % memberMembers.length;
-                    vip = memberMembers[vipIndex];
-                     // Reset skipped list in state if it only contained invalid IDs
-                     if (validSkippedVips.length !== currentSkippedVips.length) {
-                         state.rotationState.skippedVips = []; // Clear out invalid IDs (will be saved on next update)
-                         console.warn("Cleared invalid IDs from skipped VIP list.");
-                     }
-                }
-            } else {
-                vip = { id: 'NO_MEMBERS', name: 'No Members Available', rank: 'System' };
-            }
+             // Filter skipped VIPs to ensure they still exist in the member list
+             const validSkippedVips = currentSkippedVips.filter(id => getMemberById(id));
+             if (validSkippedVips.length > 0) {
+                  vip = getMemberById(validSkippedVips[0]);
+                  // If the original skipped list had invalid IDs, we might need to update the state,
+                  // but let's handle that on advancement instead of here.
+             } else if (memberMembers.length > 0) {
+                 vip = memberMembers[currentMemberIndex % memberMembers.length];
+             } else {
+                 vip = { id: 'NO_MEMBERS', name: 'No Members Available', rank: 'System' };
+             }
 
-            // Ensure VIP and Conductor objects are returned, even if defaults/errors
-            conductor = conductor || { id: 'ERROR_CONDUCTOR', name: 'Error Assigning Conductor', rank: 'System' };
-            vip = vip || { id: 'ERROR_VIP', name: 'Error Assigning VIP', rank: 'System' };
+            conductor = conductor || { id: 'ERROR_CONDUCTOR', name: 'Error Conductor', rank: 'System' };
+            vip = vip || { id: 'ERROR_VIP', name: 'Error VIP', rank: 'System' };
 
             return { date: targetDate, conductor, vip };
         }
 
         function advanceRotation(vipAccepted, selectedMvpId = null) {
-            // This function now modifies the *local* state object directly.
-            // It does *not* call save/update functions. That happens *after* this runs.
-
+            console.log('Advancing Rotation - VIP Accepted:', vipAccepted, 'Selected MVP:', selectedMvpId);
             if (!state.rotationState || !state.rotationState.currentDate) {
                  console.error("Cannot advance rotation: state or currentDate is missing.");
-                 return; // Should not happen if listener works, but safety check
+                 return false; // Indicate failure
              }
 
-            // Get current state details from the local 'state' object
-            const currentDate = new Date(state.rotationState.currentDate + 'T00:00:00Z');
+            const currentDateStr = state.rotationState.currentDate;
+            const currentDate = new Date(currentDateStr + 'T00:00:00Z');
             const currentDayOfWeek = getDayOfWeek(currentDate);
-            const currentR4R5Index = state.rotationState.r4r5Index;
-            const currentMemberIndex = state.rotationState.memberIndex;
-            const currentSkippedVips = [...state.rotationState.skippedVips]; // Copy
+            const currentR4R5Index = state.rotationState.r4r5Index ?? 0; // Default to 0 if null/undefined
+            const currentMemberIndex = state.rotationState.memberIndex ?? 0; // Default to 0
+            const currentSkippedVips = [...(state.rotationState.skippedVips || [])]; // Ensure array, then copy
+            const currentVipCounts = { ...(state.rotationState.vipCounts || {}) }; // Ensure object, then copy
+            const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) }; // Ensure object, then copy
+            const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) }; // Ensure object, then copy
+
 
             // Determine the VIP who was proposed for the *current* day
             const { vip: proposedVip } = calculateDailyAssignments(
-                state.rotationState.currentDate,
+                currentDateStr,
                 currentR4R5Index,
                 currentMemberIndex,
-                currentSkippedVips,
-                state.rotationState.selectedMvps
+                currentSkippedVips, // Use current valid skipped list
+                currentSelectedMvps
             );
 
             if (!proposedVip || !proposedVip.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) {
-                 console.warn("Cannot advance: No valid VIP proposed for today. Check Member list.");
+                 console.warn("Cannot advance: No valid VIP proposed for today.");
                  alert("Cannot advance: No valid VIP was proposed for today. Check Member list.");
-                 // Don't modify state if advance failed
-                 return;
+                 return false; // Indicate failure
             }
+            const proposedVipId = proposedVip.id;
 
             // Update indices and skipped list based on VIP action
             let nextR4R5Index = currentR4R5Index;
             let nextMemberIndex = currentMemberIndex;
             let nextSkippedVips = [...currentSkippedVips]; // Work on a fresh copy
 
-            const wasVipFromSkippedList = nextSkippedVips.length > 0 && nextSkippedVips[0] === proposedVip.id;
+            // Ensure skipped list only contains valid members before processing
+             nextSkippedVips = nextSkippedVips.filter(id => getMemberById(id));
+             const wasVipFromSkippedList = nextSkippedVips.length > 0 && nextSkippedVips[0] === proposedVipId;
 
             if (vipAccepted) {
                 if (wasVipFromSkippedList) {
-                    nextSkippedVips.shift(); // Remove accepted VIP from skipped list
+                    nextSkippedVips.shift(); // Remove accepted VIP from *start* of skipped list
                 } else {
                     nextMemberIndex = (currentMemberIndex + 1); // Advance regular index
                 }
+                 // Increment VIP count
+                 currentVipCounts[proposedVipId] = (currentVipCounts[proposedVipId] || 0) + 1;
+                 console.log(`VIP Count for ${proposedVip.name} incremented to ${currentVipCounts[proposedVipId]}`);
+
             } else { // VIP Skipped
-                if (!wasVipFromSkippedList) {
-                    // Add to *front* of skipped list only if not already there
-                     if (!nextSkippedVips.includes(proposedVip.id)) {
-                         nextSkippedVips.unshift(proposedVip.id);
-                     }
+                if (!wasVipFromSkippedList && !nextSkippedVips.includes(proposedVipId)) {
+                     // Add to *front* of skipped list only if not already there & not already skipped
+                     nextSkippedVips.unshift(proposedVipId);
+                     console.log(`${proposedVip.name} added to skipped list.`);
+                     // Member index does NOT advance
+                 } else if (wasVipFromSkippedList) {
+                     console.log(`${proposedVip.name} was already skipped, remains at front.`);
+                     // Member index does NOT advance
+                 } else {
+                    console.log(`${proposedVip.name} skipped, but already in skipped list later? No index advance.`);
                     // Member index does NOT advance
-                }
-                // If already skipped & skipped again, stays at front. No change needed here.
+                 }
+                 // VIP count does NOT increment if skipped
             }
 
             // Advance R4/R5 index ONLY if transitioning from a Tue-Sat day
@@ -696,12 +766,16 @@
                 nextR4R5Index = (currentR4R5Index + 1);
             }
 
-             // Store selected MVP if provided for today
+             // Store selected MVP and increment count if provided for today
              if (selectedMvpId) {
-                 if (currentDayOfWeek === MVP_TECH_DAY) {
-                     state.rotationState.selectedMvps[`${state.rotationState.currentDate}_Mon`] = selectedMvpId;
-                 } else if (currentDayOfWeek === MVP_VS_DAY) {
-                     state.rotationState.selectedMvps[`${state.rotationState.currentDate}_Sun`] = selectedMvpId;
+                 const member = getMemberById(selectedMvpId);
+                 if (member) { // Check if member exists
+                     const mvpKeyBase = currentDayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`;
+                     currentSelectedMvps[mvpKeyBase] = selectedMvpId;
+                     currentMvpCounts[selectedMvpId] = (currentMvpCounts[selectedMvpId] || 0) + 1;
+                     console.log(`MVP ${member.name} selected. Count incremented to ${currentMvpCounts[selectedMvpId]}`);
+                 } else {
+                     console.warn(`Selected MVP ID ${selectedMvpId} not found in members list.`);
                  }
              }
 
@@ -714,10 +788,12 @@
             state.rotationState.r4r5Index = nextR4R5Index;
             state.rotationState.memberIndex = nextMemberIndex;
             state.rotationState.skippedVips = nextSkippedVips;
-            // selectedMvps was updated above if necessary
+            state.rotationState.selectedMvps = currentSelectedMvps; // Update with potentially new MVP
+            state.rotationState.vipCounts = currentVipCounts; // Update counts
+            state.rotationState.mvpCounts = currentMvpCounts; // Update counts
 
-            console.log("Local state advanced:", state.rotationState);
-            // The calling function (handleVipAction) will handle saving to Firestore
+            console.log("Local state advanced. New State:", JSON.parse(JSON.stringify(state.rotationState)));
+            return true; // Indicate success
         }
 
         // --- Firestore Persistence ---
@@ -731,17 +807,20 @@
                       memberIndex: state.rotationState.memberIndex ?? 0,
                       skippedVips: state.rotationState.skippedVips || [], // Ensure array
                       selectedMvps: state.rotationState.selectedMvps || {}, // Ensure object
+                      vipCounts: state.rotationState.vipCounts || {},    // NEW: Save counts
+                      mvpCounts: state.rotationState.mvpCounts || {}     // NEW: Save counts
                  }
             };
 
-            console.log("Attempting to write to Firestore:", stateToSave);
-            stateDocRef.set(stateToSave)
+            console.log("Attempting to write to Firestore:", JSON.parse(JSON.stringify(stateToSave)));
+            return stateDocRef.set(stateToSave) // Return the promise
                 .then(() => {
                     console.log("State successfully written to Firestore!");
                 })
                 .catch((error) => {
                     console.error("Error writing state to Firestore: ", error);
-                    alert(`Error saving changes: ${error.message}. Please check console or try again later.`);
+                    alert(`Error saving changes: ${error.message}. Check Firestore rules and console.`);
+                    throw error; // Re-throw error for calling function
                 });
         }
 
@@ -753,22 +832,15 @@
 
             if (name && rank) {
                 if (!Array.isArray(state.members)) state.members = []; // Ensure array exists
-
-                if (state.members.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+                if (state.members.some(m => m && m.name.toLowerCase() === name.toLowerCase())) {
                      alert(`Member "${name}" already exists.`);
                      return;
                  }
-
-                const newMember = {
-                    id: generateId(), // Generate unique ID
-                    name: name,
-                    rank: rank
-                };
+                const newMember = { id: generateId(), name: name, rank: rank };
                 state.members.push(newMember);
                 sortMembers(); // Sort the local state
-                updateFirestoreState(); // Push the updated state to Firestore
-                // UI update will be triggered by the Firestore listener
-                newMemberNameInput.value = ''; // Clear form
+                updateFirestoreState(); // Push the updated state
+                newMemberNameInput.value = '';
             } else {
                 alert("Please enter both name and rank.");
             }
@@ -778,49 +850,76 @@
             const memberToRemove = getMemberById(idToRemove);
             if (!memberToRemove) return;
 
-             if (confirm(`Are you sure you want to remove ${memberToRemove.name}? This will update for everyone.`)) {
+             if (confirm(`Are you sure you want to remove ${memberToRemove.name}? This will update for everyone and remove them from rotation/skipped lists.`)) {
                 if (!Array.isArray(state.members)) state.members = [];
-                state.members = state.members.filter(member => member.id !== idToRemove);
+                state.members = state.members.filter(member => member && member.id !== idToRemove);
 
-                // Also remove from skipped list if present
+                if (!state.rotationState) state.rotationState = {}; // Ensure exists
+
+                // Remove from skipped list
                 if (!Array.isArray(state.rotationState.skippedVips)) state.rotationState.skippedVips = [];
                 state.rotationState.skippedVips = state.rotationState.skippedVips.filter(id => id !== idToRemove);
 
-                // Also remove from selected MVPs history
-                 if (typeof state.rotationState.selectedMvps !== 'object') state.rotationState.selectedMvps = {};
-                 for (const key in state.rotationState.selectedMvps) {
-                     if (state.rotationState.selectedMvps[key] === idToRemove) {
-                         delete state.rotationState.selectedMvps[key];
-                     }
-                 }
+                // Optional: Clear from selected MVPs history (or leave history intact?) - Leaving intact for now.
+                // Optional: Clear counts? Let's leave counts for historical record for now.
 
-                // Update Firestore with the modified state
-                updateFirestoreState();
-                // UI update will be triggered by the Firestore listener
+                updateFirestoreState(); // Update Firestore
              }
         }
 
+        function handleRankChange(event) { // NEW Function for rank editing
+            const selectElement = event.target;
+            const memberId = selectElement.dataset.memberId;
+            const newRank = selectElement.value;
+
+            const memberIndex = state.members.findIndex(m => m && m.id === memberId);
+            if (memberIndex === -1) {
+                console.error("Member not found for rank change:", memberId);
+                return;
+            }
+            const memberName = state.members[memberIndex].name;
+
+            // Avoid unnecessary updates
+             if (state.members[memberIndex].rank === newRank) {
+                 return;
+             }
+
+            if (confirm(`Change rank of ${memberName} to ${newRank}? This affects sorting and rotation logic.`)) {
+                state.members[memberIndex].rank = newRank;
+                console.log(`Rank changed locally for ${memberName} (${memberId}) to ${newRank}`);
+                sortMembers(); // Re-sort based on new rank
+                updateFirestoreState(); // Save changes
+            } else {
+                selectElement.value = state.members[memberIndex].rank; // Reset dropdown if cancelled
+            }
+        }
+
+
         function sortMembers() {
-             if (!Array.isArray(state.members)) return; // Don't sort if not an array
+             if (!Array.isArray(state.members)) return;
             const rankOrder = { 'R5': 1, 'R4': 2, 'Member': 3 };
             state.members.sort((a, b) => {
-                 const rankDiff = (rankOrder[a.rank] || 99) - (rankOrder[b.rank] || 99); // Handle potential undefined ranks
+                 // Handle cases where a or b might be null/undefined temporarily
+                 const rankA = a?.rank;
+                 const rankB = b?.rank;
+                 const nameA = a?.name || "";
+                 const nameB = b?.name || "";
+
+                 const rankDiff = (rankOrder[rankA] || 99) - (rankOrder[rankB] || 99);
                  if (rankDiff !== 0) return rankDiff;
-                 // Optional: Sort by name within the same rank for consistency
-                 return (a.name || "").localeCompare(b.name || "");
+                 return nameA.localeCompare(nameB);
             });
         }
 
 
         // --- Rendering Functions ---
         function renderMemberList() {
-            memberListEl.innerHTML = ''; // Clear existing list
-            if (!Array.isArray(state.members)) {
+            memberListEl.innerHTML = '';
+             if (!Array.isArray(state.members)) {
                  memberListEl.innerHTML = '<li>Error loading members.</li>';
                  memberCountEl.textContent = 'Error';
                  return;
              }
-
             memberCountEl.textContent = state.members.length;
             sortMembers(); // Ensure sorted before rendering
 
@@ -830,30 +929,45 @@
             }
 
             state.members.forEach(member => {
-                 if (!member || !member.id || !member.name || !member.rank) return; // Skip invalid member entries
+                 if (!member || !member.id || !member.name || !member.rank) return; // Skip invalid entries
 
                 const li = document.createElement('li');
                 li.dataset.memberId = member.id;
 
-                const memberInfo = document.createElement('span');
-                memberInfo.textContent = member.name;
+                const memberInfo = document.createElement('div'); // Use div for flex container
+                memberInfo.classList.add('member-info');
 
-                const rankBadge = document.createElement('span');
-                rankBadge.classList.add('rank-badge', `rank-${member.rank}`);
-                rankBadge.textContent = member.rank;
-                memberInfo.appendChild(rankBadge);
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = member.name;
+                memberInfo.appendChild(nameSpan);
+
+                // --- Rank Select Dropdown ---
+                const rankSelect = document.createElement('select');
+                rankSelect.classList.add('rank-select-inline');
+                rankSelect.dataset.memberId = member.id;
+                RANKS.forEach(r => {
+                    const option = document.createElement('option');
+                    option.value = r;
+                    option.textContent = r;
+                    if (member.rank === r) {
+                        option.selected = true;
+                    }
+                    rankSelect.appendChild(option);
+                });
+                rankSelect.addEventListener('change', handleRankChange); // Attach listener
+                memberInfo.appendChild(rankSelect);
+                // --- End Rank Select ---
 
                 const actions = document.createElement('div');
                 actions.classList.add('member-actions');
-
                 const removeBtn = document.createElement('button');
                 removeBtn.textContent = 'Remove';
                 removeBtn.classList.add('btn-remove');
                 removeBtn.onclick = () => removeMember(member.id);
-
                 actions.appendChild(removeBtn);
-                li.appendChild(memberInfo);
-                li.appendChild(actions);
+
+                li.appendChild(memberInfo); // Add the info container
+                li.appendChild(actions);    // Add the actions container
                 memberListEl.appendChild(li);
             });
         }
@@ -872,40 +986,39 @@
 
             const currentDate = new Date(state.rotationState.currentDate + 'T00:00:00Z');
              if (isNaN(currentDate)) {
-                 currentDateEl.textContent = "Invalid Date!";
-                 return; // Stop rendering if date is bad
+                 currentDateEl.textContent = "Invalid Date!"; return;
              }
-
             const dayOfWeek = getDayOfWeek(currentDate);
+
+            // Ensure counts are objects before passing
+             const safeSelectedMvps = state.rotationState.selectedMvps || {};
+             const safeSkippedVips = state.rotationState.skippedVips || [];
 
             const { conductor, vip } = calculateDailyAssignments(
                 state.rotationState.currentDate,
-                state.rotationState.r4r5Index,
-                state.rotationState.memberIndex,
-                state.rotationState.skippedVips,
-                state.rotationState.selectedMvps
+                state.rotationState.r4r5Index ?? 0,
+                state.rotationState.memberIndex ?? 0,
+                 safeSkippedVips,
+                 safeSelectedMvps
             );
 
-             // Check if calculation resulted in errors
              if (!conductor || !vip || conductor.id?.startsWith('ERROR_') || vip.id?.startsWith('ERROR_')) {
                   currentDateEl.textContent = formatDate(currentDate);
                   currentDayOfWeekEl.textContent = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
-                  currentConductorEl.textContent = "Error calculating assignments";
-                  currentVipEl.textContent = "Error calculating assignments";
+                  currentConductorEl.textContent = conductor.name || "Error";
+                  currentVipEl.textContent = vip.name || "Error";
                   document.getElementById('vip-actions').style.display = 'none';
                   mvpSelectionArea.style.display = 'none';
                    undoAdvanceBtn.disabled = true;
                   return;
              }
 
-
             currentDateEl.textContent = formatDate(currentDate);
             currentDayOfWeekEl.textContent = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
 
             let isMvpSelectionNeeded = false;
-            const conductorName = conductor.name || "Unknown Conductor";
+            const conductorName = conductor.name || "Unknown";
             const conductorRank = conductor.rank || "N/A";
-
             if (conductor.id === 'MVP_MON_SELECT' || conductor.id === 'MVP_SUN_SELECT') {
                  currentConductorEl.innerHTML = `<span class="mvp-selection-required">${conductorName}</span>`;
                  isMvpSelectionNeeded = true;
@@ -917,34 +1030,32 @@
                 mvpSelectionArea.style.display = 'none';
             }
 
-             const vipName = vip.name || "Unknown VIP";
+             const vipName = vip.name || "Unknown";
              const vipRank = vip.rank || "N/A";
-            let isVipActionPossible = false;
-
+             let isVipActionPossible = false;
             if (vip.id === 'NO_MEMBERS' || vip.id === 'ERROR_VIP') {
                 currentVipEl.textContent = vipName;
                 document.getElementById('vip-actions').style.display = 'none';
             } else {
                 currentVipEl.textContent = `${vipName} (${vipRank})`;
                 document.getElementById('vip-actions').style.display = 'block';
-                 isVipActionPossible = true;
+                isVipActionPossible = true;
             }
 
-            // Enable/Disable VIP action buttons based on MVP requirement
-             vipAcceptedBtn.disabled = isMvpSelectionNeeded;
-             vipSkippedBtn.disabled = isMvpSelectionNeeded;
+             // Enable/Disable VIP action buttons based on MVP requirement *and* if VIP is valid
+             vipAcceptedBtn.disabled = !isVipActionPossible || isMvpSelectionNeeded;
+             vipSkippedBtn.disabled = !isVipActionPossible || isMvpSelectionNeeded;
 
-            // Update Undo button state based on local memory
             undoAdvanceBtn.disabled = !state.previousRotationState;
         }
 
 
         function populateMvpSelect() {
             mvpSelect.innerHTML = '<option value="">-- Select MVP --</option>';
-             if (!Array.isArray(state.members)) return; // Safety check
-
+             if (!Array.isArray(state.members)) return;
+            // Maybe filter who can be MVP? For now, list all.
             state.members.forEach(member => {
-                if (!member || !member.id) return; // Skip invalid members
+                if (!member || !member.id) return;
                 const option = document.createElement('option');
                 option.value = member.id;
                 option.textContent = `${member.name} (${member.rank})`;
@@ -958,140 +1069,185 @@
                 skippedVipsListEl.innerHTML = '<li>Error loading skipped list.</li>';
                 return;
             }
+             const validSkippedVips = state.rotationState.skippedVips.filter(id => getMemberById(id));
 
-            if (state.rotationState.skippedVips.length === 0) {
+            if (validSkippedVips.length === 0) {
                 skippedVipsListEl.innerHTML = '<li>Queue is empty.</li>';
                 return;
             }
-
-            state.rotationState.skippedVips.forEach(memberId => {
+            validSkippedVips.forEach(memberId => {
                 const member = getMemberById(memberId);
-                if (member) {
+                if (member) { // Should always be true now due to filter
                     const li = document.createElement('li');
                     li.textContent = `${member.name} (${member.rank})`;
                     skippedVipsListEl.appendChild(li);
-                } else {
-                     // Member might have been removed, show placeholder
-                     const li = document.createElement('li');
-                     li.textContent = `Removed Member (ID: ${memberId})`;
-                     li.style.fontStyle = 'italic';
-                     li.style.color = 'grey';
-                     skippedVipsListEl.appendChild(li);
                 }
             });
         }
 
         function renderSchedule() {
-             scheduleDisplayListEl.innerHTML = ''; // Clear existing schedule
+             scheduleDisplayListEl.innerHTML = '';
              if (!state.rotationState || !state.rotationState.currentDate || !Array.isArray(state.members)) {
                  scheduleDisplayListEl.innerHTML = '<li>Rotation not ready or no members.</li>';
                  return;
              }
-
              const memberMembers = getMembersByRank('Member');
              if (memberMembers.length === 0) {
                  scheduleDisplayListEl.innerHTML = '<li>No "Member" rank players available for VIP rotation.</li>';
                  return;
              }
 
-             // Filter skipped VIPs to only include valid, existing members
              const validSkippedVips = (state.rotationState.skippedVips || []).filter(id => getMemberById(id));
-             const scheduleLength = memberMembers.length + validSkippedVips.length; // Show one full cycle
+             // Show roughly one full cycle of members + skipped, or at least 7 days
+             const scheduleLength = Math.max(7, memberMembers.length + validSkippedVips.length);
 
              let tempDate = new Date(state.rotationState.currentDate + 'T00:00:00Z');
              let tempR4R5Index = state.rotationState.r4r5Index ?? 0;
              let tempMemberIndex = state.rotationState.memberIndex ?? 0;
-             let tempSkippedVips = [...validSkippedVips]; // Use filtered list for projection
+             let tempSkippedVips = [...validSkippedVips];
              let tempSelectedMvps = JSON.parse(JSON.stringify(state.rotationState.selectedMvps || {}));
 
-             for (let i = 0; i < Math.max(1, scheduleLength); i++) { // Ensure at least one day is shown
+             for (let i = 0; i < scheduleLength; i++) {
+                  if (isNaN(tempDate)) {
+                      console.error("Invalid date encountered during schedule render");
+                      break; // Stop if date becomes invalid
+                  }
                  const dateStr = getISODateString(tempDate);
-                 if (!dateStr) continue; // Skip if date is invalid
-
                  const dayOfWeek = getDayOfWeek(tempDate);
 
-                 // Use calculate function with temporary state copies
                  const { conductor, vip } = calculateDailyAssignments(
-                     dateStr,
-                     tempR4R5Index,
-                     tempMemberIndex,
-                     tempSkippedVips,
-                     tempSelectedMvps
+                     dateStr, tempR4R5Index, tempMemberIndex, tempSkippedVips, tempSelectedMvps
                  );
 
-                  // Check for calculation errors
+                 // Skip rendering if calculation fails for a future date
                  if (conductor.id?.startsWith('ERROR_') || vip.id?.startsWith('ERROR_')) {
                       console.warn(`Schedule calculation error on ${dateStr}`);
-                      // Optionally display an error in the schedule list
-                      const errLi = document.createElement('li');
-                      errLi.textContent = `${formatDate(tempDate)} - Error calculating`;
-                      errLi.style.color = 'red';
-                      scheduleDisplayListEl.appendChild(errLi);
-                      // Advance date and continue loop
-                      tempDate = addDays(tempDate, 1);
-                      continue;
-                 }
-
-
-                 const li = document.createElement('li');
-                 if (i === 0) {
-                     li.classList.add('current-day');
-                 }
-
-                 const dateSpan = document.createElement('span');
-                 dateSpan.classList.add('schedule-date');
-                 dateSpan.textContent = formatDate(tempDate);
-
-                 const conductorSpan = document.createElement('span');
-                 conductorSpan.classList.add('schedule-conductor');
-                 const conductorName = conductor.name || "Unknown Conductor";
-                 const conductorRank = conductor.rank || "N/A";
-                 if (conductor.id === 'MVP_MON_SELECT' || conductor.id === 'MVP_SUN_SELECT') {
-                      conductorSpan.innerHTML = `<span class="mvp-selection-required">${conductorName}</span>`;
+                       // Advance date and indices without rendering this day
                  } else {
-                     conductorSpan.textContent = `C: ${conductorName} (${conductorRank})`;
-                 }
+                     // Render the list item
+                     const li = document.createElement('li');
+                     if (i === 0) li.classList.add('current-day');
 
-                 const vipSpan = document.createElement('span');
-                 vipSpan.classList.add('schedule-vip');
-                 const vipName = vip.name || "Unknown VIP";
-                 const vipRank = vip.rank || "N/A";
-                 if (vip.id === 'NO_MEMBERS' || vip.id === 'ERROR_VIP') {
-                     vipSpan.textContent = vipName;
-                 } else {
-                      vipSpan.textContent = `VIP: ${vipName} (${vipRank})`;
-                      if (tempSkippedVips.length > 0 && tempSkippedVips[0] === vip.id) {
-                           vipSpan.textContent += ' (Skipped)';
-                      }
-                 }
+                     const dateSpan = document.createElement('span');
+                     dateSpan.classList.add('schedule-date');
+                     dateSpan.textContent = formatDate(tempDate);
 
-                 li.appendChild(dateSpan);
-                 li.appendChild(conductorSpan);
-                 li.appendChild(vipSpan);
-                 scheduleDisplayListEl.appendChild(li);
+                     const conductorSpan = document.createElement('span');
+                     conductorSpan.classList.add('schedule-conductor');
+                     const cName = conductor.name || "Unknown";
+                     const cRank = conductor.rank || "N/A";
+                     if (conductor.id === 'MVP_MON_SELECT' || conductor.id === 'MVP_SUN_SELECT') {
+                          // Show MVP required *if* it hasn't been selected yet for that future date
+                           const mvpKey = dayOfWeek === MVP_TECH_DAY ? `${dateStr}_Mon` : `${dateStr}_Sun`;
+                           if (tempSelectedMvps[mvpKey]) {
+                               const selectedMvp = getMemberById(tempSelectedMvps[mvpKey]);
+                               conductorSpan.textContent = `C: ${selectedMvp?.name || 'Selected MVP'} (MVP)`;
+                           } else {
+                               conductorSpan.innerHTML = `<span class="mvp-selection-required">${cName}</span>`;
+                           }
+                     } else {
+                         conductorSpan.textContent = `C: ${cName} (${cRank})`;
+                     }
+
+                     const vipSpan = document.createElement('span');
+                     vipSpan.classList.add('schedule-vip');
+                     const vName = vip.name || "Unknown";
+                     const vRank = vip.rank || "N/A";
+                     if (vip.id === 'NO_MEMBERS' || vip.id === 'ERROR_VIP') {
+                         vipSpan.textContent = vName;
+                     } else {
+                          vipSpan.textContent = `VIP: ${vName} (${vRank})`;
+                          if (tempSkippedVips.length > 0 && tempSkippedVips[0] === vip.id) {
+                               vipSpan.textContent += ' (Skipped)';
+                          }
+                     }
+
+                     li.appendChild(dateSpan);
+                     li.appendChild(conductorSpan);
+                     li.appendChild(vipSpan);
+                     scheduleDisplayListEl.appendChild(li);
+                 } // End render check
+
 
                  // Simulate advancement for the *next* day's calculation (assuming acceptance)
-                 const wasVipFromSkippedList = tempSkippedVips.length > 0 && tempSkippedVips[0] === vip?.id;
-
-                 if (wasVipFromSkippedList) {
-                     tempSkippedVips.shift();
-                 } else if (vip.id && !vip.id.startsWith('NO_') && !vip.id.startsWith('ERROR_')) {
-                     tempMemberIndex = (tempMemberIndex + 1);
+                 if (vip.id && !vip.id.startsWith('NO_') && !vip.id.startsWith('ERROR_')) {
+                     const wasVipFromSkippedList = tempSkippedVips.length > 0 && tempSkippedVips[0] === vip.id;
+                     if (wasVipFromSkippedList) {
+                         tempSkippedVips.shift();
+                     } else {
+                         tempMemberIndex = (tempMemberIndex + 1);
+                     }
                  }
 
-                 if (dayOfWeek >= 2 && dayOfWeek <= 6) { // If *current* day was Tue-Sat
+                 if (dayOfWeek >= 2 && dayOfWeek <= 6) { // Tue-Sat advance R4/R5
                      tempR4R5Index = (tempR4R5Index + 1);
                  }
 
-                 // Advance to the next day
-                 tempDate = addDays(tempDate, 1);
+                 tempDate = addDays(tempDate, 1); // Advance to the next day
+             }
+        }
+
+        function renderStatistics() { // NEW function for stats
+            mvpStatsListEl.innerHTML = '';
+            vipStatsListEl.innerHTML = '';
+
+            if (!state.members || state.members.length === 0) {
+                mvpStatsListEl.innerHTML = '<li>No members</li>';
+                vipStatsListEl.innerHTML = '<li>No members</li>';
+                return;
+            }
+
+             // Ensure counts are objects
+             const mvpCounts = state.rotationState.mvpCounts || {};
+             const vipCounts = state.rotationState.vipCounts || {};
+
+            // Sort members alphabetically for display
+            const sortedMembersForStats = [...state.members].sort((a, b) => (a?.name || "").localeCompare(b?.name || ""));
+
+            let hasMvpCounts = false;
+            sortedMembersForStats.forEach(member => {
+                if (!member || !member.id || !member.name) return;
+                const count = mvpCounts[member.id] || 0;
+                if (count > 0) hasMvpCounts = true; // Check if there are any counts > 0
+                const li = document.createElement('li');
+                li.textContent = member.name;
+                const countSpan = document.createElement('span');
+                countSpan.classList.add('stats-count');
+                countSpan.textContent = count;
+                li.appendChild(countSpan);
+                mvpStatsListEl.appendChild(li);
+            });
+             if (!hasMvpCounts && sortedMembersForStats.length > 0) {
+                 mvpStatsListEl.innerHTML = '<li>No MVPs recorded yet.</li>';
+             }
+
+            let hasVipCounts = false;
+            sortedMembersForStats.forEach(member => {
+                 if (!member || !member.id || !member.name) return;
+                 const count = vipCounts[member.id] || 0;
+                 if (count > 0) hasVipCounts = true;
+                 const li = document.createElement('li');
+                 li.textContent = member.name;
+                 const countSpan = document.createElement('span');
+                 countSpan.classList.add('stats-count');
+                 countSpan.textContent = count;
+                 li.appendChild(countSpan);
+                 vipStatsListEl.appendChild(li);
+            });
+            if (!hasVipCounts && sortedMembersForStats.length > 0) {
+                 vipStatsListEl.innerHTML = '<li>No VIPs recorded yet.</li>';
+             }
+
+             if (sortedMembersForStats.length === 0) {
+                 mvpStatsListEl.innerHTML = '<li>No members</li>';
+                 vipStatsListEl.innerHTML = '<li>No members</li>';
              }
         }
 
         function render() {
-            console.log("Rendering UI with current local state:", JSON.parse(JSON.stringify(state))); // Deep copy for logging
+            console.log("Rendering UI with current local state...");
 
-            // Apply theme (remains local)
+            // Apply theme (local preference)
             const theme = localStorage.getItem('theme');
             if (theme === 'dark') {
                 document.body.classList.add('dark-mode');
@@ -1101,13 +1257,13 @@
                 themeToggleBtn.textContent = "Toggle Dark Mode";
             }
 
-            renderMemberList();     // Depends on state.members
-            renderSkippedVips();    // Depends on state.rotationState.skippedVips and state.members
-            renderCurrentDay();     // Depends on state.rotationState and state.members
-            renderSchedule();       // Depends on state.rotationState and state.members
+            renderMemberList();
+            renderSkippedVips();
+            renderCurrentDay();
+            renderSchedule();
+            renderStatistics(); // NEW: Render stats
 
-             // Ensure undo button state reflects local memory
-             undoAdvanceBtn.disabled = !state.previousRotationState;
+            undoAdvanceBtn.disabled = !state.previousRotationState;
         }
 
         // --- Event Listeners ---
@@ -1116,7 +1272,7 @@
         vipAcceptedBtn.addEventListener('click', () => handleVipAction(true));
         vipSkippedBtn.addEventListener('click', () => handleVipAction(false));
 
-        function handleVipAction(accepted) {
+        async function handleVipAction(accepted) { // Make async to await Firestore update
             if (!state.rotationState || !state.rotationState.currentDate) {
                  alert("Rotation state not loaded yet. Please wait.");
                  return;
@@ -1130,175 +1286,238 @@
             // Check if MVP selection is required *and* not yet made for today
             if (dayOfWeek === MVP_TECH_DAY || dayOfWeek === MVP_VS_DAY) {
                  const mvpKey = dayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`;
-                 // Only require selection if it's not already recorded in the state for this day
-                 if (!state.rotationState.selectedMvps[mvpKey]) {
+                 const existingMvp = state.rotationState.selectedMvps?.[mvpKey];
+                 if (!existingMvp) { // Only require if not already set
                      selectedMvpId = mvpSelect.value;
                      if (!selectedMvpId) {
                          alert("Please select the MVP Conductor for today using the dropdown.");
-                         return; // Stop processing if MVP needed but not selected
+                         return; // Stop processing
                      }
+                 } else {
+                     console.log("MVP already selected for today:", existingMvp);
                  }
             }
 
+            // Disable buttons immediately to prevent double clicks
+             vipAcceptedBtn.disabled = true;
+             vipSkippedBtn.disabled = true;
+             undoAdvanceBtn.disabled = true; // Disable undo temporarily
+
             // Store the CURRENT state locally for potential UNDO *before* advancing
-            // Deep copy is essential here
-            state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState));
-            console.log("Stored previous state for undo:", state.previousRotationState);
+            try {
+                state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState));
+                 console.log("Stored previous state for undo:", JSON.parse(JSON.stringify(state.previousRotationState)));
+             } catch (e) {
+                 console.error("Error stringifying state for undo:", e);
+                 state.previousRotationState = null; // Clear if error
+             }
 
 
-            // Advance the local state (this function modifies 'state' directly)
-            advanceRotation(accepted, selectedMvpId);
+            // Advance the local state
+            const success = advanceRotation(accepted, selectedMvpId);
 
-            // Push the *new* state to Firestore
-            updateFirestoreState();
-
-            // The UI will re-render automatically via the Firestore listener.
-            // Manually update the undo button's enabled state *immediately*
-             undoAdvanceBtn.disabled = !state.previousRotationState;
+            if (success) {
+                // Push the *new* state to Firestore and wait for it to complete
+                 try {
+                     await updateFirestoreState();
+                     // Re-enable undo button *only after successful save*
+                     undoAdvanceBtn.disabled = !state.previousRotationState;
+                     console.log("Firestore update successful after VIP action.");
+                 } catch (error) {
+                     console.error("Failed to save state after VIP action:", error);
+                     alert("Error saving the changes. The rotation might not have advanced correctly. Please check the state or try again.");
+                     // Rollback local state changes if save fails? Complicated.
+                     // For now, just log the error. The listener *should* eventually get the old state back.
+                     // Re-enable buttons so user can try again (maybe?)
+                      // renderCurrentDay(); // Re-render to potentially re-enable buttons based on old state
+                 }
+            } else {
+                // Advancement failed (e.g., no valid VIP), re-render to show current state/enable buttons
+                 console.warn("advanceRotation failed, re-rendering current day.");
+                 renderCurrentDay(); // Re-enable buttons based on current (unchanged) state
+            }
+             // The UI will re-render automatically via the Firestore listener eventually,
+             // but renderCurrentDay() was called above if needed, and undo button handled.
         }
 
-        undoAdvanceBtn.addEventListener('click', () => {
+        undoAdvanceBtn.addEventListener('click', async () => { // Make async
             if (!state.previousRotationState) {
                 alert("No previous state to undo.");
                 return;
             }
-            if (confirm("Are you sure you want to undo the last advancement? This will revert the date, indices, and skipped list for everyone.")) {
-                // Restore the rotation part of the state from the local backup
-                 state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState));
-                 // Clear the local undo buffer
-                 state.previousRotationState = null;
-                 console.log("Rolled back local state:", state.rotationState);
-
-
-                 // Push the rolled-back state to Firestore
-                 updateFirestoreState();
-
-                 // The UI will update via the listener. Disable undo button locally immediately.
+            if (confirm("Are you sure you want to undo the last advancement? This will revert the date, indices, skipped list, and counts for everyone.")) {
+                 // Disable button immediately
                  undoAdvanceBtn.disabled = true;
+
+                // Restore the rotation part of the state from the local backup
+                 try {
+                     // Ensure previous state is valid before restoring
+                     if (typeof state.previousRotationState !== 'object' || state.previousRotationState === null) {
+                          throw new Error("Invalid previous state data for undo.");
+                     }
+                     state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState));
+                     state.previousRotationState = null; // Clear the local undo buffer *after* successful restore
+                     console.log("Rolled back local state:", JSON.parse(JSON.stringify(state.rotationState)));
+
+                     // Push the rolled-back state to Firestore and wait
+                     await updateFirestoreState();
+                     console.log("Firestore updated successfully after undo.");
+                     // Listener will trigger re-render. Undo button remains disabled as previousRotationState is now null.
+                 } catch (error) {
+                     console.error("Error during undo process:", error);
+                     alert("Error performing undo: " + error.message + ". State might be inconsistent.");
+                     // Attempt to re-enable button? Or leave disabled? Leave disabled for safety.
+                 }
             }
         });
 
-        // Theme toggle uses localStorage (local preference)
         themeToggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
             if (document.body.classList.contains('dark-mode')) {
-                document.body.classList.remove('dark-mode');
-                localStorage.setItem('theme', 'light');
-                 themeToggleBtn.textContent = "Toggle Dark Mode";
-            } else {
-                document.body.classList.add('dark-mode');
                 localStorage.setItem('theme', 'dark');
                  themeToggleBtn.textContent = "Toggle Light Mode";
+            } else {
+                localStorage.setItem('theme', 'light');
+                 themeToggleBtn.textContent = "Toggle Dark Mode";
             }
-            // No need to call render() just for theme unless styles depend on JS state
         });
 
-        // Reset Button
-         resetBtn.addEventListener('click', () => {
-             if (confirm("!! WARNING !!\nAre you sure you want to reset ALL rotation data in Firestore?\nThis will reset the member list to the initial default and restart the rotation schedule from the next Monday for EVERYONE using this tool.\nThis cannot be undone easily.")) {
+        resetBtn.addEventListener('click', async () => { // Make async
+             if (confirm("!! WARNING !!\nAre you sure you want to reset ALL rotation data in Firestore?\nThis resets members to default, restarts schedule from next Monday, and clears counts for EVERYONE.\nThis CANNOT be easily undone.")) {
                  console.warn("Resetting data in Firestore!");
-                 // Reset local state first
+                 // Disable button immediately
+                 resetBtn.disabled = true;
+
                  const today = new Date();
                  const nextMonday = findNextMonday(today);
-                 // Deep copy initial members to avoid modifying the constant
-                 state.members = initialMembers.map(m => ({...m}));
+                 const nextMondayStr = getISODateString(nextMonday);
+
+                 // Reset local state
+                 state.members = initialMembers.map(m => ({...m})); // Fresh copy with new IDs? No, keep original IDs for consistency if possible
                  state.rotationState = {
-                     currentDate: getISODateString(nextMonday),
+                     currentDate: nextMondayStr,
                      r4r5Index: 0,
                      memberIndex: 0,
                      skippedVips: [],
                      selectedMvps: {},
+                     vipCounts: {}, // Reset counts
+                     mvpCounts: {}  // Reset counts
                  };
                  state.previousRotationState = null; // Clear undo buffer
 
-                 // Update Firestore with the reset state
-                 updateFirestoreState();
-                 // The listener will eventually trigger a render, but render locally too for immediate feedback
-                 render();
-                 alert("Data has been reset to defaults in Firestore.");
+                 // Update Firestore with the reset state and wait
+                  try {
+                      await updateFirestoreState();
+                      console.log("Firestore successfully reset to defaults.");
+                      alert("Data has been reset to defaults in Firestore.");
+                      // Listener will trigger re-render.
+                  } catch (error) {
+                      console.error("Error resetting Firestore data:", error);
+                      alert("Error resetting data. Please check console and Firestore.");
+                      // Re-enable button if reset failed
+                      resetBtn.disabled = false;
+                  }
              }
          });
 
         // --- Initialization and Realtime Updates ---
         stateDocRef.onSnapshot((doc) => {
             console.log("Firestore data received/updated.");
-            let needsInitialDateCalculation = false;
+            let needsInitialSetup = false;
+            let needsDateUpdate = false;
 
             if (doc.exists) {
                 const data = doc.data();
-                console.log("Data from Firestore:", data);
+                console.log("Raw data from Firestore:", data);
 
-                // Update local state carefully, preserving local undo state
-                const localPreviousState = state.previousRotationState; // Keep local undo state
-                 // Perform basic validation and provide defaults for missing fields
+                // Keep local undo state safe
+                const localPreviousState = state.previousRotationState;
+
+                 // Validate and structure loaded data, providing defaults
+                 const loadedMembers = (data.members || []).map(m => ({ ...m, id: m.id || generateId() })); // Ensure array and IDs
+                 const loadedRotationState = data.rotationState || {};
+
                  state = {
-                      members: (data.members || []).map(m => ({ ...m, id: m.id || generateId() })), // Ensure members array and IDs
+                      members: loadedMembers,
                       rotationState: {
-                          currentDate: data.rotationState?.currentDate || null,
-                          r4r5Index: data.rotationState?.r4r5Index ?? 0,
-                          memberIndex: data.rotationState?.memberIndex ?? 0,
-                          skippedVips: data.rotationState?.skippedVips || [], // Ensure array
-                          selectedMvps: data.rotationState?.selectedMvps || {}, // Ensure object
+                          currentDate: loadedRotationState.currentDate || null,
+                          r4r5Index: loadedRotationState.r4r5Index ?? 0,
+                          memberIndex: loadedRotationState.memberIndex ?? 0,
+                          skippedVips: loadedRotationState.skippedVips || [],
+                          selectedMvps: loadedRotationState.selectedMvps || {},
+                          vipCounts: loadedRotationState.vipCounts || {}, // Load counts
+                          mvpCounts: loadedRotationState.mvpCounts || {}  // Load counts
                       },
                       previousRotationState: localPreviousState // Restore local undo state
                  };
 
-                // If date is missing after loading, flag to calculate it
-                if (!state.rotationState.currentDate) {
-                     console.warn("Loaded state missing currentDate.");
-                     needsInitialDateCalculation = true;
+                // Check if date is missing or invalid after loading
+                 if (!state.rotationState.currentDate || isNaN(new Date(state.rotationState.currentDate + 'T00:00:00Z'))) {
+                     console.warn("Loaded state missing or has invalid currentDate.");
+                     needsDateUpdate = true;
                  }
 
             } else {
-                // Document doesn't exist - Initialize with defaults and save to Firestore
-                console.log("No state document found in Firestore. Initializing with defaults...");
-                needsInitialDateCalculation = true; // Also need to calculate date for new setup
-                 state = {
-                    members: initialMembers.map(m => ({...m})), // Fresh copy
-                    rotationState: {
-                        currentDate: null, // Will be set below
-                        r4r5Index: 0,
-                        memberIndex: 0,
-                        skippedVips: [],
-                        selectedMvps: {},
-                    },
-                    previousRotationState: null // No undo state initially
-                };
+                // Document doesn't exist - Flag for initial setup
+                console.log("No state document found in Firestore. Performing initial setup...");
+                needsInitialSetup = true;
             }
 
-            // Calculate and set the date if needed (either missing or initial setup)
-            if (needsInitialDateCalculation) {
-                 console.log("Calculating initial start date (next Monday).");
+            // Handle Initial Setup or Date Update
+            if (needsInitialSetup || needsDateUpdate) {
+                 console.log(`Performing setup: Initial=${needsInitialSetup}, DateUpdate=${needsDateUpdate}`);
                  const today = new Date();
                  const nextMonday = findNextMonday(today);
-                 state.rotationState.currentDate = getISODateString(nextMonday);
-                 console.log("Setting start date to:", state.rotationState.currentDate);
-                 // If the document didn't exist, save the newly initialized state
-                 if (!doc.exists) {
-                      updateFirestoreState();
+                 const nextMondayStr = getISODateString(nextMonday);
+
+                 if (needsInitialSetup) {
+                      // Set up the entire state with initial defaults
+                      state = {
+                         members: initialMembers.map(m => ({...m})), // Fresh copy
+                         rotationState: {
+                             currentDate: nextMondayStr,
+                             r4r5Index: 0,
+                             memberIndex: 0,
+                             skippedVips: [],
+                             selectedMvps: {},
+                             vipCounts: {},
+                             mvpCounts: {}
+                         },
+                         previousRotationState: null
+                      };
+                      console.log("Initialized state with defaults, starting date:", nextMondayStr);
+                      // Save the newly initialized state back to Firestore immediately
+                      updateFirestoreState().catch(err => console.error("Failed to save initial state:", err));
+                 } else if (needsDateUpdate) {
+                      // Only update the date in the existing state
+                      state.rotationState.currentDate = nextMondayStr;
+                      console.log("Updating missing/invalid date to:", nextMondayStr);
+                      // Save the state with the corrected date
+                       updateFirestoreState().catch(err => console.error("Failed to save updated date:", err));
                  }
-                 // If date was just missing, we might want to save the update? Optional.
-                 // For now, let the next user action save it.
             }
 
-            console.log("Final local state after Firestore update/init:", JSON.parse(JSON.stringify(state))); // Log the state being rendered
+            console.log("Final local state after Firestore update/init:", JSON.parse(JSON.stringify(state)));
 
-            // Render the UI with the latest state from Firestore (or defaults)
+            // Render the UI with the latest state
             render();
+            // Ensure admin buttons are re-enabled after state load (if they were disabled by error)
+            resetBtn.disabled = false;
+
 
         }, (error) => {
             console.error("Error listening to Firestore state:", error);
-            alert("FATAL ERROR: Could not connect to the rotation database.\nPlease check your internet connection and ensure Firebase is set up correctly.\nRefresh the page to try again.\n\nError details: " + error.message);
+            alert(`FATAL ERROR: Could not connect to the rotation database (${error.message}).\nCheck connection, Firebase setup (Config & Rules!), and console.\nRefresh to retry.`);
             // Disable critical controls on error
             document.getElementById('vip-actions').style.display = 'none';
-            document.getElementById('member-manager').style.pointerEvents = 'none';
+             document.getElementById('member-manager').style.pointerEvents = 'none'; // Disable interactions
              document.getElementById('member-manager').style.opacity = '0.5';
              currentDateEl.textContent = "Connection Error";
-
+             resetBtn.disabled = true;
+             undoAdvanceBtn.disabled = true;
         });
 
         // --- Initial Render for Theme ---
-        // Render theme immediately on load based on localStorage preference.
-        // Data-dependent rendering happens inside the onSnapshot listener.
         (() => {
              const theme = localStorage.getItem('theme');
              if (theme === 'dark') {
@@ -1309,7 +1528,6 @@
                  themeToggleBtn.textContent = "Toggle Dark Mode";
              }
         })();
-
 
     </script>
 
