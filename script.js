@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "2.0"; // Oder deine gewünschte Version
+const SCRIPT_VERSION = "2.0"; // Set to 2.0 as requested
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -97,7 +97,9 @@ function renderMemberList() { memberListEl.innerHTML = ''; if (!Array.isArray(st
 function renderCurrentDay() { if (!state.rotationState?.currentDate) return; const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); if (isNaN(currentDate)) { currentDateEl.textContent = "Invalid Date!"; return; } const dayOfWeek = getDayOfWeek(currentDate); const safeSelectedMvps = state.rotationState.selectedMvps || {}; const safeSkippedVips = state.rotationState.skippedVips || []; const safeSubstitutes = state.rotationState.completedSubstituteVipsThisRound || []; const { conductor: calculatedConductor, vip } = calculateDailyAssignments(currentDateStr, state.rotationState.r4r5Index ?? 0, state.rotationState.memberIndex ?? 0, safeSkippedVips, safeSelectedMvps, safeSubstitutes); if (!calculatedConductor || !vip || calculatedConductor.id?.startsWith('ERR')) return; currentDateEl.textContent = formatDate(currentDate); currentDayOfWeekEl.textContent = currentDate.toLocaleDateString('en-US', { weekday: 'long' }); let finalConductor = calculatedConductor; let isMvpSelectionNeeded = false; const mvpKey = dayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`; if (dayOfWeek === MVP_TECH_DAY || dayOfWeek === MVP_VS_DAY) { const selectedMvpId = safeSelectedMvps[mvpKey]; if (selectedMvpId) { const storedMvp = getMemberById(selectedMvpId); if (storedMvp) { finalConductor = storedMvp; currentConductorEl.textContent = `${finalConductor.name} (${finalConductor.rank})`; mvpSelectionArea.style.display = 'none'; isMvpSelectionNeeded = false; } else { currentConductorEl.textContent = `Stored MVP (ID: ${selectedMvpId}) not found!`; mvpSelectionArea.style.display = 'none'; isMvpSelectionNeeded = false; } } else { currentConductorEl.innerHTML = `<span class="mvp-selection-required">${calculatedConductor.name}</span>`; populateMvpSelect(); mvpSelectionArea.style.display = 'block'; mvpSelect.value = ""; isMvpSelectionNeeded = true; } } else { currentConductorEl.textContent = `${finalConductor.name} (${finalConductor.rank})`; mvpSelectionArea.style.display = 'none'; isMvpSelectionNeeded = false; } const vipName = vip.name || "Unknown"; const vipRank = vip.rank || "N/A"; let isVipActionPossible = false; if (vip.id === 'NO_MEMBERS' || vip.id.startsWith('ERR') || vip.id === 'NO_VALID_MEMBER') { currentVipEl.textContent = vipName; document.getElementById('vip-actions').style.display = 'none'; } else { currentVipEl.textContent = `${vipName} (${vipRank})`; document.getElementById('vip-actions').style.display = 'block'; isVipActionPossible = true; } alternativeVipArea.style.display = 'none'; vipAcceptedBtn.disabled = !isVipActionPossible || isMvpSelectionNeeded; vipSkippedBtn.disabled = !isVipActionPossible || isMvpSelectionNeeded; undoAdvanceBtn.disabled = !state.previousRotationState; }
 function populateMvpSelect() { mvpSelect.innerHTML = '<option value="">-- Select MVP --</option>'; if (!Array.isArray(state.members)) return; state.members.forEach(m => { if (!m?.id) return; const o=document.createElement('option'); o.value=m.id; o.textContent=`${m.name} (${m.rank})`; mvpSelect.appendChild(o); }); }
 function renderSkippedVips() { skippedVipsListEl.innerHTML = ''; const container = document.getElementById('skipped-vips'); if (!state.rotationState?.skippedVips) { container.querySelector('p').textContent = 'Error loading list.'; return; } const valid = state.rotationState.skippedVips.filter(id => getMemberById(id)); if (valid.length === 0) { container.querySelector('p').textContent = 'Queue is empty.'; return; } container.querySelector('p').textContent = ''; valid.forEach(id => { const m = getMemberById(id); if(m){const li = document.createElement('li'); li.textContent = `${m.name} (${m.rank})`; skippedVipsListEl.appendChild(li);} }); }
-function renderSchedule() { // Corrected Simulation Step Logic & Debug Logs & Pass Substitutes
+
+// --- renderSchedule (v9 - Korrektur Double Skip Bug) ---
+function renderSchedule() {
      scheduleDisplayListEl.innerHTML = ''; if (!state.rotationState?.currentDate || !state.members) { scheduleDisplayListEl.innerHTML = '<li>Not ready</li>'; return; } const members = getMembersByRank('Member'); if (members.length === 0) { scheduleDisplayListEl.innerHTML = '<li>No Members</li>'; return; } const skipped = (state.rotationState.skippedVips || []).filter(id => getMemberById(id));
      const substitutes = state.rotationState.completedSubstituteVipsThisRound || [];
      const len = Math.max(7, members.length + skipped.length); let date = new Date(state.rotationState.currentDate + 'T00:00:00Z'); let r4r5Idx = state.rotationState.r4r5Index ?? 0; let memIdx = state.rotationState.memberIndex ?? 0; let tempSkipped = [...skipped]; let tempMvps = JSON.parse(JSON.stringify(state.rotationState.selectedMvps || {}));
@@ -109,6 +111,7 @@ function renderSchedule() { // Corrected Simulation Step Logic & Debug Logs & Pa
           const day = getDayOfWeek(date);
           console.log(`renderSchedule Loop ${i}: Simulating for ${dateStr} (weekday: ${day}) with MemIdx=${memIdx}, R4R5Idx=${r4r5Idx}, TempSkipped=[${tempSkipped.map(id=>getMemberById(id)?.name).join(',')}]`);
 
+          // Pass the *current* substitute list to the calculation for future days
           const { conductor, vip } = calculateDailyAssignments(dateStr, r4r5Idx, memIdx, tempSkipped, tempMvps, substitutes);
 
           // --- Rendering (unverändert) ---
@@ -121,21 +124,21 @@ function renderSchedule() { // Corrected Simulation Step Logic & Debug Logs & Pa
           let vipProcessed = false; // Flag: Wurde ein gültiger VIP (skipped oder regular) für diesen Tag gefunden?
 
           if (vip?.id && !vip.id.startsWith('NO_') && !vip.id.startsWith('ERROR_') && vip.id !== 'NO_VALID_MEMBER') {
-              vipProcessed = true;
+              vipProcessed = true; // Mark that a valid VIP was determined for this day
               const wasVipFromSkippedList = tempSkipped.length > 0 && tempSkipped[0] === vip.id;
               console.log(`>>> Sim ${i} VIP Check: Was From Skipped List? ${wasVipFromSkippedList}`);
 
               if (wasVipFromSkippedList) {
                   const removed = tempSkipped.shift(); // Entferne aus temp Liste für nächste Iteration
                   console.log(`>>> Sim ${i} NextDay Prep: Removed skipped ${getMemberById(removed)?.name}. Remaining tempSkipped=[${tempSkipped.map(id => getMemberById(id)?.name || id).join(', ')}]`);
-                  // Member Index rückt trotzdem vor (siehe unten)
+                  // Flag vipProcessed bleibt true
               } else {
                   console.log(`>>> Sim ${i} NextDay Prep: Regular VIP ${vip.name} processed.`);
-                  // Member Index rückt vor (siehe unten)
+                  // Flag vipProcessed bleibt true
               }
           } else {
               console.log(`>>> Sim ${i} NextDay Prep: No valid VIP processed this iteration.`);
-              // Member Index rückt NICHT vor
+              // Flag vipProcessed bleibt false
           }
 
           // Advance Member Index for next loop ONLY if a valid VIP was processed this loop
@@ -207,10 +210,11 @@ async function handleConfirmAlternativeVip() { // Corrected to store selected MV
      // --- Round End Check & Clear Substitutes ---
      const memberMembers = getMembersByRank('Member');
      let finalSubstituteList = currentSubstituteList;
-     // Check if the *next* member index would wrap around AND if the current index wasn't already 0
-     if (memberMembers.length > 0 && ((currentMemberIndex + 1) % memberMembers.length === 0) && currentMemberIndex >= 0) {
-         console.log("HANDLE CONFIRM ALT VIP: Round End detected based on Member Index! Clearing Substitute List.");
-         finalSubstituteList = [];
+     // Check if the *current* member index (before potential skip advance) marks the end of the list
+     if (memberMembers.length > 0 && ((currentMemberIndex + 1) % memberMembers.length === 0) && currentMemberIndex >= 0 ) {
+          // If processing the LAST member in the list (even if skipped/substituted), clear for the next round beginning tomorrow.
+          console.log("HANDLE CONFIRM ALT VIP: Round End detected based on Member Index! Clearing Substitute List.");
+          finalSubstituteList = [];
      }
      // --- End Round End Check ---
 
