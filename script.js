@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "2.3"; // Version erhöht für Reset-Fix
+const SCRIPT_VERSION = "4.3 Live"; // Version erhöht für Reset-Fix
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
