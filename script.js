@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "2.1"; // Final Version
+const SCRIPT_VERSION = "4.0 Live"; // Final Version
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -16,9 +16,107 @@ const stateDocRef = db.collection("rotationState").doc("s749_state");
 // --- Constants and State ---
 const MVP_TECH_DAY = 1; const MVP_VS_DAY = 0; const RANKS = ["Member", "R4", "R5"];
 let state = { members: [], rotationState: { currentDate: null, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {}, alternativeVips: {}, completedSubstituteVipsThisRound: [] }, previousRotationState: null };
-const initialMembers = [ /* --- Member list --- */
-    { name: "LadyLaik", rank: "R5"}, { name: "Enyaisrave", rank: "R4"}, { name: "Johcar", rank: "R4"}, { name: "DaVinnie", rank: "R4"}, { name: "CornFlakes", rank: "R4"}, { name: "Lyfe", rank: "R4"}, { name: "Motherfrogger", rank: "R4"}, { name: "Pabs64", rank: "R4"}, { name: "Supersebb", rank: "R4"}, { name: "Munky", rank: "R4"}, { name: "NymbleV", rank: "R4"}, { name: "R1/R2/R3 Team", rank: "Member"}, { name: "Smugwell", rank: "Member"}, { name: "MRAN", rank: "Member"}, { name: "Chris", rank: "Member"}, { name: "Leka98", rank: "Member"}, { name: "Darkknight", rank: "Member"}, { name: "Rikkyyyyy", rank: "Member"}, { name: "Gekkegerrittttt", rank: "Member"}, { name: "Ever4", rank: "Member"}, { name: "KFCPov3r", rank: "Member"}, { name: "F L A C", rank: "Member"}, { name: "Jotersan", rank: "Member"}, { name: "Novis01", rank: "Member"}, { name: "Gorkiules", rank: "Member"}, { name: "Jaista", rank: "Member"}, { name: "Megalomanie", rank: "Member"}, { name: "АЛЕКС1980", rank: "Member"}, { name: "TheFloh", rank: "Member"}, { name: "Caretta", rank: "Member"}, { name: "Swisskilla", rank: "Member"}, { name: "Llama deDrama", rank: "Member"}, { name: "oo APACHE oo", rank: "Member"}, { name: "GoFireES", rank: "Member"}, { name: "Foggis", rank: "Member"}, { name: "Paracitus", rank: "Member"}, { name: "IRONHAMMER", rank: "Member"}, { name: "jarako", rank: "Member"}, { name: "Be a wolf", rank: "Member"}, { name: "Commander Blad", rank: "Member"}, { name: "ILYES B", rank: "Member"}, { name: "KingStridez", rank: "Member"}, { name: "diRty freNk", rank: "Member"}, { name: "PavlosP", rank: "Member"}, { name: "Chasseur 777", rank: "Member"}, { name: "Raph911", rank: "Member"}, { name: "B1wizz", rank: "Member"}, { name: "Thirteen Squid", rank: "Member"}, { name: "ЖЭКА", rank: "Member"}, { name: "SkyWinder", rank: "Member"}, { name: "FireXice (Bibot)", rank: "Member"}, { name: "GhósT", rank: "Member"}, { name: "Juantxo79", rank: "Member"}, { name: "Kezual", rank: "Member"}, { name: "Maytos", rank: "Member"}, { name: "jassådu", rank: "Member"}, { name: "Temd", rank: "Member"}, { name: "olabaf", rank: "Member"}, { name: "Faluche", rank: "Member"}, { name: "xPerseus", rank: "Member"}, { name: "Lutonian", rank: "Member"}, { name: "Juggernaut x", rank: "Member"}, { name: "Umbra XIII", rank: "Member"}, { name: "BLÀDE", rank: "Member"}, { name: "koppies", rank: "Member"}, { name: "Cocsi29400", rank: "Member"}, { name: "Nohardfeelz", rank: "Member"}, { name: "Vechniy", rank: "Member"}, { name: "theFoxXx", rank: "Member"}, { name: "S A M U R A i", rank: "Member"}, { name: "Dfyra", rank: "Member"}, { name: "Meloziaa", rank: "Member"}, { name: "Aminos77", rank: "Member"}, { name: "Rev T", rank: "Member"}, { name: "BlackWizardUA", rank: "Member"}, { name: "Bekim1", rank: "Member"}, { name: "Edx777", rank: "Member"}, { name: "Laeta", rank: "Member"}, { name: "Kyuchie", rank: "Member"}, { name: "depechefann", rank: "Member"}, { name: "BlackPush", rank: "Member"}, { name: "Gunnovic", rank: "Member"}, { name: "NinoDelBono", rank: "Member"}, { name: "Dario217", rank: "Member"}
-].map(m => ({ ...m, id: generateId() }));
+
+// --- Initial Data (Updated Member List - October 2024) ---
+const initialMembers = [
+    { name: "LadyLaik", rank: "R5"},
+    { name: "CornFlakes", rank: "R4"},
+    { name: "DaVinnie", rank: "R4"},
+    { name: "Enyaisrave", rank: "R4"},
+    { name: "Johcar", rank: "R4"},
+    { name: "Lyfe", rank: "R4"},
+    { name: "Motherfrogger", rank: "R4"},
+    { name: "Munky", rank: "R4"},
+    { name: "NymbleV", rank: "R4"},
+    { name: "Pabs64", rank: "R4"},
+    { name: "Supersebb", rank: "R4"},
+    { name: "АЛЕКС1980", rank: "Member"},
+    { name: "Ado1111", rank: "Member"},
+    { name: "Aminos77", rank: "Member"},
+    { name: "Arczos", rank: "Member"},
+    { name: "B1wizz", rank: "Member"},
+    { name: "Be a wolf", rank: "Member"},
+    { name: "Bekim1", rank: "Member"},
+    { name: "BlackPush", rank: "Member"},
+    { name: "BlackWizardUA", rank: "Member"},
+    { name: "Blacky12345", rank: "Member"},
+    { name: "BLÀDE", rank: "Member"},
+    { name: "Caretta", rank: "Member"},
+    { name: "Chasseur 777", rank: "Member"},
+    { name: "Cocsi29400", rank: "Member"},
+    { name: "Commander Blad", rank: "Member"},
+    { name: "Chris (Smash)", rank: "Member"},
+    { name: "CurseTea", rank: "Member"},
+    { name: "Darkknight", rank: "Member"},
+    { name: "Dario", rank: "Member"},
+    { name: "depechefann", rank: "Member"},
+    { name: "DiamondDixie", rank: "Member"},
+    { name: "diRty freNk", rank: "Member"},
+    { name: "Dfyra", rank: "Member"},
+    { name: "Edx777", rank: "Member"},
+    { name: "Ever4", rank: "Member"},
+    { name: "F L A C", rank: "Member"},
+    { name: "Faluche", rank: "Member"},
+    { name: "FireXice (Bibot)", rank: "Member"},
+    { name: "Foggis", rank: "Member"},
+    { name: "GhósT", rank: "Member"},
+    { name: "Gekkegerrittttt", rank: "Member"},
+    { name: "GoFireES", rank: "Member"},
+    { name: "Gorkiules", rank: "Member"},
+    { name: "Gunnovic", rank: "Member"},
+    { name: "ILYES B", rank: "Member"},
+    { name: "IRONHAMMER", rank: "Member"},
+    { name: "Jaista", rank: "Member"},
+    { name: "jarako", rank: "Member"},
+    { name: "jassådu", rank: "Member"},
+    { name: "Jotersan", rank: "Member"},
+    { name: "Juantxo79", rank: "Member"},
+    { name: "Juggernaut x", rank: "Member"},
+    { name: "Kezual", rank: "Member"},
+    { name: "KingStridez", rank: "Member"},
+    { name: "koppies", rank: "Member"},
+    { name: "KPShafty", rank: "Member"},
+    { name: "Kyuchie", rank: "Member"},
+    { name: "Laeta", rank: "Member"},
+    { name: "Leka98", rank: "Member"},
+    { name: "Llama deDrama", rank: "Member"},
+    { name: "Lutonian", rank: "Member"},
+    { name: "Mala Mimi", rank: "Member"},
+    { name: "Maytos", rank: "Member"},
+    { name: "Megalomanie", rank: "Member"},
+    { name: "Meloziaa", rank: "Member"},
+    { name: "MRAN", rank: "Member"},
+    { name: "NinoDelBono", rank: "Member"},
+    { name: "Nohardfeelz", rank: "Member"},
+    { name: "Novis01", rank: "Member"},
+    { name: "Oliviax", rank: "Member"},
+    { name: "olabaf", rank: "Member"},
+    { name: "oo APACHE oo", rank: "Member"},
+    { name: "Paracitus", rank: "Member"},
+    { name: "PavlosP", rank: "Member"},
+    { name: "Peckap", rank: "Member"},
+    { name: "Rev T", rank: "Member"},
+    { name: "Raph911", rank: "Member"},
+    { name: "Rikkyyyyy", rank: "Member"},
+    { name: "S A M U R A i", rank: "Member"},
+    { name: "Sarajevo Mfrcs DC", rank: "Member"},
+    { name: "SkyWinder", rank: "Member"},
+    { name: "Smugwell", rank: "Member"},
+    { name: "Swisskilla", rank: "Member"},
+    { name: "Temd", rank: "Member"},
+    { name: "TermiGator", rank: "Member"},
+    { name: "TheFloh", rank: "Member"},
+    { name: "theFoxXx", rank: "Member"},
+    { name: "Thirteen Squid", rank: "Member"},
+    { name: "Umbra XIII", rank: "Member"},
+    { name: "Vechniy", rank: "Member"},
+    { name: "Villanueva 1", rank: "Member"},
+    { name: "Xyz111111", rank: "Member"},
+    { name: "xAishaRosex", rank: "Member"},
+    { name: "xPerseus", rank: "Member"},
+    { name: "Zoorglub", rank: "Member"},
+    { name: "ЖЭКА", rank: "Member"}
+].map(m => ({ ...m, id: generateId() })); // Add unique IDs
 
 // --- DOM Elements ---
 const memberListEl = document.getElementById('member-list'); const addMemberForm = document.getElementById('add-member-form'); const newMemberNameInput = document.getElementById('new-member-name'); const newMemberRankSelect = document.getElementById('new-member-rank'); const memberCountEl = document.getElementById('member-count'); const currentDateEl = document.getElementById('current-date'); const currentDayOfWeekEl = document.getElementById('current-day-of-week'); const currentConductorEl = document.getElementById('current-conductor'); const currentVipEl = document.getElementById('current-vip'); const skippedVipsListEl = document.getElementById('skipped-vips').querySelector('ul'); const scheduleDisplayListEl = document.getElementById('schedule-display').querySelector('ul'); const vipAcceptedBtn = document.getElementById('vip-accepted'); const vipSkippedBtn = document.getElementById('vip-skipped'); const undoAdvanceBtn = document.getElementById('undo-advance'); const mvpSelectionArea = document.getElementById('mvp-selection-area'); const mvpSelect = document.getElementById('mvp-select');
@@ -51,14 +149,14 @@ function calculateDailyAssignments(targetDateStr, currentR4R5Index, currentMembe
     const validSkippedVips = currentSkippedVips.filter(id => getMemberById(id));
     if (validSkippedVips.length > 0) {
         vip = getMemberById(validSkippedVips[0]);
-        // effectiveMemberIndex remains currentMemberIndex, as this slot will be consumed by the skipped VIP
+        effectiveMemberIndex = currentMemberIndex;
     } else if (memberMembers.length > 0) {
         let potentialVip = null; let loopCheck = 0; let tempMemberIndex = currentMemberIndex;
         while (!potentialVip && loopCheck < memberMembers.length) {
             const vipIndex = tempMemberIndex % memberMembers.length; const candidate = memberMembers[vipIndex];
             if (candidate && !completedSubstitutes.includes(candidate.id)) {
                 potentialVip = candidate;
-                effectiveMemberIndex = tempMemberIndex; // Store the index of the found VIP
+                effectiveMemberIndex = tempMemberIndex;
             } else { tempMemberIndex++; loopCheck++; }
         }
         if (potentialVip) { vip = potentialVip; } else { vip = { id: 'NO_VALID_MEMBER', name: 'No valid Member left', rank: 'Sys' }; effectiveMemberIndex = currentMemberIndex; }
@@ -76,18 +174,18 @@ function advanceRotation(vipAccepted, selectedMvpId = null) { // Handles ACCEPT 
      const currentSubstituteList = [...(state.rotationState.completedSubstituteVipsThisRound || [])];
 
      const { vip: proposedVip, effectiveMemberIndex } = calculateDailyAssignments(currentDateStr, currentR4R5Index, currentMemberIndex, currentSkippedVips, currentSelectedMvps, currentSubstituteList);
-     if (!proposedVip?.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) { console.warn("No valid VIP"); alert("No valid VIP proposed."); return false; }
+     if (!proposedVip?.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) { alert("No valid VIP proposed."); return false; }
      const proposedVipId = proposedVip.id; let nextR4R5Index = currentR4R5Index; let nextMemberIndex = currentMemberIndex; let nextSkippedVips = currentSkippedVips.filter(id => getMemberById(id)); const wasVipFromSkippedList = nextSkippedVips.length > 0 && nextSkippedVips[0] === proposedVipId;
      if (!vipAccepted) { console.error("advanceRotation called incorrectly for skip path."); return false; }
 
-     nextMemberIndex = effectiveMemberIndex + 1; // Set next index based on effective index used
+     nextMemberIndex = effectiveMemberIndex + 1;
 
      if (wasVipFromSkippedList) { nextSkippedVips.shift(); }
      currentVipCounts[proposedVipId] = (currentVipCounts[proposedVipId] || 0) + 1;
 
      const memberMembers = getMembersByRank('Member');
      let finalSubstituteList = currentSubstituteList;
-     if (memberMembers.length > 0 && (nextMemberIndex % memberMembers.length === 0) && nextMemberIndex > 0) { // Check if index wrapped around
+     if (memberMembers.length > 0 && (nextMemberIndex % memberMembers.length === 0) && nextMemberIndex > 0) {
          console.log("ADVANCE ROTATION: Round End detected! Clearing Substitute List.");
          finalSubstituteList = [];
      }
@@ -114,7 +212,7 @@ function renderMemberList() { memberListEl.innerHTML = ''; if (!Array.isArray(st
 function renderCurrentDay() { if (!state.rotationState?.currentDate) return; const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); if (isNaN(currentDate)) { currentDateEl.textContent = "Invalid Date!"; return; } const dayOfWeek = getDayOfWeek(currentDate); const safeSelectedMvps = state.rotationState.selectedMvps || {}; const safeSkippedVips = state.rotationState.skippedVips || []; const safeSubstitutes = state.rotationState.completedSubstituteVipsThisRound || []; const { conductor: calculatedConductor, vip } = calculateDailyAssignments(currentDateStr, state.rotationState.r4r5Index ?? 0, state.rotationState.memberIndex ?? 0, safeSkippedVips, safeSelectedMvps, safeSubstitutes); if (!calculatedConductor || !vip || calculatedConductor.id?.startsWith('ERR')) return; currentDateEl.textContent = formatDate(currentDate); currentDayOfWeekEl.textContent = currentDate.toLocaleDateString('en-US', { weekday: 'long' }); let finalConductor = calculatedConductor; let isMvpSelectionNeeded = false; const mvpKey = dayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`; if (dayOfWeek === MVP_TECH_DAY || dayOfWeek === MVP_VS_DAY) { const selectedMvpId = safeSelectedMvps[mvpKey]; if (selectedMvpId) { const storedMvp = getMemberById(selectedMvpId); if (storedMvp) { finalConductor = storedMvp; currentConductorEl.textContent = `${finalConductor.name} (${finalConductor.rank})`; mvpSelectionArea.style.display = 'none'; isMvpSelectionNeeded = false; } else { currentConductorEl.textContent = `Stored MVP (ID: ${selectedMvpId}) not found!`; mvpSelectionArea.style.display = 'none'; isMvpSelectionNeeded = false; } } else { currentConductorEl.innerHTML = `<span class="mvp-selection-required">${calculatedConductor.name}</span>`; populateMvpSelect(); mvpSelectionArea.style.display = 'block'; mvpSelect.value = ""; isMvpSelectionNeeded = true; } } else { currentConductorEl.textContent = `${finalConductor.name} (${finalConductor.rank})`; mvpSelectionArea.style.display = 'none'; isMvpSelectionNeeded = false; } const vipName = vip.name || "Unknown"; const vipRank = vip.rank || "N/A"; let isVipActionPossible = false; if (vip.id === 'NO_MEMBERS' || vip.id.startsWith('ERR') || vip.id === 'NO_VALID_MEMBER') { currentVipEl.textContent = vipName; document.getElementById('vip-actions').style.display = 'none'; } else { currentVipEl.textContent = `${vipName} (${vipRank})`; document.getElementById('vip-actions').style.display = 'block'; isVipActionPossible = true; } alternativeVipArea.style.display = 'none'; vipAcceptedBtn.disabled = !isVipActionPossible || isMvpSelectionNeeded; vipSkippedBtn.disabled = !isVipActionPossible || isMvpSelectionNeeded; undoAdvanceBtn.disabled = !state.previousRotationState; }
 function populateMvpSelect() { mvpSelect.innerHTML = '<option value="">-- Select MVP --</option>'; if (!Array.isArray(state.members)) return; state.members.forEach(m => { if (!m?.id) return; const o=document.createElement('option'); o.value=m.id; o.textContent=`${m.name} (${m.rank})`; mvpSelect.appendChild(o); }); }
 function renderSkippedVips() { skippedVipsListEl.innerHTML = ''; const container = document.getElementById('skipped-vips'); if (!state.rotationState?.skippedVips) { container.querySelector('p').textContent = 'Error loading list.'; return; } const valid = state.rotationState.skippedVips.filter(id => getMemberById(id)); if (valid.length === 0) { container.querySelector('p').textContent = 'Queue is empty.'; return; } container.querySelector('p').textContent = ''; valid.forEach(id => { const m = getMemberById(id); if(m){const li = document.createElement('li'); li.textContent = `${m.name} (${m.rank})`; skippedVipsListEl.appendChild(li);} }); }
-function renderSchedule() { // Cleaned up, uses effectiveMemberIndex logic from calculateDailyAssignments
+function renderSchedule() { // Uses effectiveMemberIndex logic
      scheduleDisplayListEl.innerHTML = ''; if (!state.rotationState?.currentDate || !state.members) { scheduleDisplayListEl.innerHTML = '<li>Not ready</li>'; return; } const members = getMembersByRank('Member'); if (members.length === 0) { scheduleDisplayListEl.innerHTML = '<li>No Members</li>'; return; } const skipped = (state.rotationState.skippedVips || []).filter(id => getMemberById(id));
      const substitutes = state.rotationState.completedSubstituteVipsThisRound || [];
      const len = Math.max(7, members.length + skipped.length); let date = new Date(state.rotationState.currentDate + 'T00:00:00Z'); let r4r5Idx = state.rotationState.r4r5Index ?? 0; let memIdx = state.rotationState.memberIndex ?? 0; let tempSkipped = [...skipped]; let tempMvps = JSON.parse(JSON.stringify(state.rotationState.selectedMvps || {}));
@@ -135,8 +233,8 @@ function renderSchedule() { // Cleaned up, uses effectiveMemberIndex logic from 
               const wasVipFromSkippedList = tempSkipped.length > 0 && tempSkipped[0] === vip.id;
               if (wasVipFromSkippedList) { tempSkipped.shift(); }
           }
-          if (vipProcessed) { memIdx = effectiveMemberIndex + 1; }
-          else { memIdx = effectiveMemberIndex; } // Keep the index if no valid VIP processed
+          if (vipProcessed) { memIdx = effectiveMemberIndex + 1; } // Set next index based on EFFECTIVE index used + 1
+          else { memIdx = effectiveMemberIndex; } // Keep index if no valid VIP was processed
           if (day >= 2 && day <= 6) { r4r5Idx++; }
           date = addDays(date, 1);
           // --- End Simulation Step ---
@@ -144,7 +242,7 @@ function renderSchedule() { // Cleaned up, uses effectiveMemberIndex logic from 
 }
 
 function renderStatistics() { mvpStatsListEl.innerHTML = ''; vipStatsListEl.innerHTML = ''; if (!state.members?.length) { mvpStatsListEl.innerHTML = '<li>No members</li>'; vipStatsListEl.innerHTML = '<li>No members</li>'; return; } const mvpC = state.rotationState.mvpCounts || {}; const vipC = state.rotationState.vipCounts || {}; const sorted = [...state.members].sort((a, b) => (a?.name || "").localeCompare(b?.name || "")); let hasMvp = false; sorted.forEach(m => { if (!m?.id || !m.name) return; const c = mvpC[m.id] || 0; if (c > 0) hasMvp = true; const li = document.createElement('li'); li.textContent = m.name; const s = document.createElement('span'); s.classList.add('stats-count'); s.textContent = c; li.appendChild(s); mvpStatsListEl.appendChild(li); }); if (!hasMvp && sorted.length > 0) mvpStatsListEl.innerHTML = '<li>No MVPs yet.</li>'; let hasVip = false; sorted.forEach(m => { if (!m?.id || !m.name) return; const c = vipC[m.id] || 0; if (c > 0) hasVip = true; const li = document.createElement('li'); li.textContent = m.name; const s = document.createElement('span'); s.classList.add('stats-count'); s.textContent = c; li.appendChild(s); vipStatsListEl.appendChild(li); }); if (!hasVip && sorted.length > 0) vipStatsListEl.innerHTML = '<li>No VIPs yet.</li>'; if (sorted.length === 0) { mvpStatsListEl.innerHTML = '<li>No members</li>'; vipStatsListEl.innerHTML = '<li>No members</li>'; } }
-function renderLastCompletedDay() { // Corrected MVP lookup & Alt VIP display
+function renderLastCompletedDay() {
     lastCompletedDateEl.textContent = "---"; lastCompletedConductorEl.textContent = "---"; lastCompletedVipEl.textContent = "---";
     if (!state.rotationState?.currentDate || !state.previousRotationState?.currentDate) return;
     const lastDateStr = state.previousRotationState.currentDate; const lastDate = new Date(lastDateStr + 'T00:00:00Z'); if (isNaN(lastDate)) return;
@@ -156,21 +254,20 @@ function renderLastCompletedDay() { // Corrected MVP lookup & Alt VIP display
         const mvpKey = lastDayOfWeek === MVP_TECH_DAY ? `${lastDateStr}_Mon` : `${lastDateStr}_Sun`;
         const selectedMvpId = currentSelectedMvps[mvpKey];
         if (selectedMvpId) { const mvp = getMemberById(selectedMvpId); conductorName = mvp ? `${mvp.name} (MVP)` : `Selected MVP (ID: ${selectedMvpId})`; }
-        else { conductorName = "(MVP selection missing?)"; console.warn(`renderLastCompletedDay: MVP ID for key ${mvpKey} on date ${lastDateStr} not found.`); }
+        else { conductorName = "(MVP selection missing?)"; }
     } else { const r4r5 = getMembersByRank('R4/R5'); if (r4r5.length > 0) { const c = r4r5[lastR4R5Index % r4r5.length]; conductorName = c ? `${c.name} (${c.rank})` : "Error R4/R5"; } else { conductorName = "No R4/R5"; } }
     lastCompletedConductorEl.textContent = conductorName;
-    // VIP Display: Check for alternative first
     const alternativeVipId = currentAlternativeVips[lastDateStr];
     if (alternativeVipId) { const altVip = getMemberById(alternativeVipId); lastCompletedVipEl.textContent = altVip ? `${altVip.name} (${altVip.rank}) (Substitute)` : `Unknown Substitute (ID: ${alternativeVipId})`; }
     else { const { vip: proposedVip } = calculateDailyAssignments(lastDateStr, lastR4R5Index, lastMemberIndex, lastSkippedVips, {}); if (proposedVip?.id && !proposedVip.id.startsWith('NO_') && !proposedVip.id.startsWith('ERROR_')) { const currentSkipped = state.rotationState.skippedVips || []; const wasJustSkipped = currentSkipped.includes(proposedVip.id) && !lastSkippedVips.includes(proposedVip.id); lastCompletedVipEl.textContent = `${proposedVip.name} (${proposedVip.rank}) ${wasJustSkipped ? '(Skipped)' : '(Accepted)'}`; } else { lastCompletedVipEl.textContent = proposedVip?.name || "---"; } }
 }
-function render() { /* Removed theme logic */ renderMemberList(); renderSkippedVips(); renderCurrentDay(); renderSchedule(); renderStatistics(); renderLastCompletedDay(); undoAdvanceBtn.disabled = !state.previousRotationState; if (versionEl) { versionEl.textContent = SCRIPT_VERSION; } }
+function render() { /* Removed theme logic & debug logs */ renderMemberList(); renderSkippedVips(); renderCurrentDay(); renderSchedule(); renderStatistics(); renderLastCompletedDay(); undoAdvanceBtn.disabled = !state.previousRotationState; if (versionEl) { versionEl.textContent = SCRIPT_VERSION; } }
 
 // --- New/Updated Functions ---
 function handleMvpDropdownChange() { if (mvpSelectionArea.style.display === 'block') { const selVal = mvpSelect.value; const enable = selVal !== ""; const vipEl = document.getElementById('current-vip'); const vipTxt = vipEl ? vipEl.textContent : ""; const vipOK = !(vipTxt.includes("No Members") || vipTxt.includes("Error") || vipTxt.includes("No valid Member")); vipAcceptedBtn.disabled = !enable || !vipOK; vipSkippedBtn.disabled = !enable || !vipOK; } else { vipAcceptedBtn.disabled = true; vipSkippedBtn.disabled = true; } }
 function populateAlternativeVipSelect() { alternativeVipSelect.innerHTML = '<option value="">-- No Alternative VIP --</option>'; const members = getMembersByRank('Member'); const substitutes = state.rotationState.completedSubstituteVipsThisRound || []; members.forEach(m => { if (!m?.id || substitutes.includes(m.id)) return; const o = document.createElement('option'); o.value = m.id; o.textContent = `${m.name} (${m.rank})`; alternativeVipSelect.appendChild(o); }); }
-async function handleConfirmAlternativeVip() { // Corrected to store selected MVP ID and alternative VIP ID & count alt VIP
-     console.log("--- handleConfirmAlternativeVip START ---"); const alternativeVipId = alternativeVipSelect.value; const originallySkippedVipId = alternativeVipArea.dataset.originalVipId; const selectedMvpIdForToday = alternativeVipArea.dataset.selectedMvpId;
+async function handleConfirmAlternativeVip() { // Counts alt VIP
+     const alternativeVipId = alternativeVipSelect.value; const originallySkippedVipId = alternativeVipArea.dataset.originalVipId; const selectedMvpIdForToday = alternativeVipArea.dataset.selectedMvpId;
      if (!originallySkippedVipId) { console.error("Original skipped VIP ID missing!"); return; }
      confirmAlternativeVipBtn.disabled = true; alternativeVipSelect.disabled = true; undoAdvanceBtn.disabled = true;
      const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const currentDayOfWeek = getDayOfWeek(currentDate); const currentR4R5Index = state.rotationState.r4r5Index ?? 0; const currentMemberIndex = state.rotationState.memberIndex ?? 0; const currentSkippedVips = [...(state.rotationState.skippedVips || [])].filter(id => getMemberById(id));
@@ -179,27 +276,17 @@ async function handleConfirmAlternativeVip() { // Corrected to store selected MV
      const currentSubstituteList = [...(state.rotationState.completedSubstituteVipsThisRound || [])];
 
      if (!currentSkippedVips.includes(originallySkippedVipId)) { currentSkippedVips.unshift(originallySkippedVipId); }
-     // MVP Count & Map Handling
      if (selectedMvpIdForToday) { const member = getMemberById(selectedMvpIdForToday); if (member) { currentMvpCounts[selectedMvpIdForToday] = (currentMvpCounts[selectedMvpIdForToday] || 0) + 1; const mvpKey = currentDayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`; currentSelectedMvps[mvpKey] = selectedMvpIdForToday; } else { console.warn(`ConfirmAltVIP: MVP ID ${selectedMvpIdForToday} not found`); } }
-     // Alternative VIP Count & Map & Substitute List Handling
      if (alternativeVipId) { const altVipMember = getMemberById(alternativeVipId); if (altVipMember) { currentVipCounts[alternativeVipId] = (currentVipCounts[alternativeVipId] || 0) + 1; currentAlternativeVips[currentDateStr] = alternativeVipId; if (!currentSubstituteList.includes(alternativeVipId)) { currentSubstituteList.push(alternativeVipId); } } else { console.warn(`ConfirmAltVIP: Alternative VIP ID ${alternativeVipId} not found`); } }
 
-     // Round End Check
      const memberMembers = getMembersByRank('Member'); let finalSubstituteList = currentSubstituteList;
      const { effectiveMemberIndex: hypotheticalNextIndexStart } = calculateDailyAssignments(currentDateStr, currentR4R5Index, currentMemberIndex, [], {}, []);
      if (memberMembers.length > 0 && ((hypotheticalNextIndexStart + 1) % memberMembers.length === 0) && hypotheticalNextIndexStart >= 0 ) { console.log(`HANDLE CONFIRM ALT VIP: Round End detected! Clearing Substitute List.`); finalSubstituteList = []; }
 
-     // Calculate next state indices
-     let nextR4R5Index = currentR4R5Index; if (currentDayOfWeek >= 2 && currentDayOfWeek <= 6) { nextR4R5Index = (currentR4R5Index + 1); }
-     const nextDate = addDays(currentDate, 1); const nextDateStr = getISODateString(nextDate);
+     let nextR4R5Index = currentR4R5Index; if (currentDayOfWeek >= 2 && currentDayOfWeek <= 6) { nextR4R5Index = (currentR4R5Index + 1); } const nextDate = addDays(currentDate, 1); const nextDateStr = getISODateString(nextDate);
      try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); } catch (e) { console.error("Undo store error:", e); state.previousRotationState = null; }
-     // Update local state
-     state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index;
-     state.rotationState.memberIndex = currentMemberIndex; // Keep same Member index
-     state.rotationState.skippedVips = currentSkippedVips; state.rotationState.selectedMvps = currentSelectedMvps; state.rotationState.vipCounts = currentVipCounts; state.rotationState.mvpCounts = currentMvpCounts;
-     state.rotationState.alternativeVips = currentAlternativeVips;
-     state.rotationState.completedSubstituteVipsThisRound = finalSubstituteList;
-     // Save to Firestore
+     state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index; state.rotationState.memberIndex = currentMemberIndex; state.rotationState.skippedVips = currentSkippedVips; state.rotationState.selectedMvps = currentSelectedMvps; state.rotationState.vipCounts = currentVipCounts; state.rotationState.mvpCounts = currentMvpCounts;
+     state.rotationState.alternativeVips = currentAlternativeVips; state.rotationState.completedSubstituteVipsThisRound = finalSubstituteList;
      try { await updateFirestoreState(); alternativeVipArea.style.display = 'none'; } catch (error) { console.error("Save fail after alt VIP:", error); alert("Error saving. Check console."); confirmAlternativeVipBtn.disabled = false; alternativeVipSelect.disabled = false; }
 }
 
@@ -209,16 +296,16 @@ vipAcceptedBtn.addEventListener('click', () => handleVipAction(true));
 vipSkippedBtn.addEventListener('click', () => handleVipAction(false));
 mvpSelect.addEventListener('change', handleMvpDropdownChange);
 confirmAlternativeVipBtn.addEventListener('click', handleConfirmAlternativeVip);
-async function handleVipAction(accepted) { // Handles branching between Accept and Skip paths
+async function handleVipAction(accepted) {
      if (!state.rotationState?.currentDate) { alert("State not loaded"); return; }
     const currentDateStr = state.rotationState.currentDate; const currentDate = new Date(currentDateStr + 'T00:00:00Z'); const dayOfWeek = getDayOfWeek(currentDate); let selectedMvpId = null;
     if (dayOfWeek === MVP_TECH_DAY || dayOfWeek === MVP_VS_DAY) { const mvpKey = dayOfWeek === MVP_TECH_DAY ? `${currentDateStr}_Mon` : `${currentDateStr}_Sun`; const existingMvp = state.rotationState.selectedMvps?.[mvpKey]; if (!existingMvp) { selectedMvpId = mvpSelect.value; if (!selectedMvpId) { alert("Select MVP"); return; } } else { selectedMvpId = existingMvp; } }
     vipAcceptedBtn.disabled = true; vipSkippedBtn.disabled = true; undoAdvanceBtn.disabled = true; alternativeVipArea.style.display = 'none';
-    if (accepted) { // --- ACCEPT PATH ---
+    if (accepted) { // ACCEPT PATH
         try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); } catch (e) { console.error("Undo store error:", e); state.previousRotationState = null; }
         const success = advanceRotation(true, selectedMvpId);
         if (success) { try { await updateFirestoreState(); undoAdvanceBtn.disabled = !state.previousRotationState; } catch (error) { console.error("handleVipAction(Accept): Save FAIL:", error); alert("Error saving. Check console!"); renderCurrentDay(); } } else { console.warn("handleVipAction(Accept): advanceRotation failed"); renderCurrentDay(); }
-    } else { // --- SKIP PATH ---
+    } else { // SKIP PATH
         const { vip: proposedVip } = calculateDailyAssignments( currentDateStr, state.rotationState.r4r5Index ?? 0, state.rotationState.memberIndex ?? 0, state.rotationState.skippedVips || [], state.rotationState.selectedMvps || {}, state.rotationState.completedSubstituteVipsThisRound || [] ); if (!proposedVip?.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) { alert("Cannot process skip: No valid VIP was proposed."); renderCurrentDay(); return; }
         alternativeVipArea.dataset.originalVipId = proposedVip.id; alternativeVipArea.dataset.selectedMvpId = selectedMvpId || ""; originalSkippedVipNameEl.textContent = proposedVip.name || "The proposed VIP";
         populateAlternativeVipSelect(); alternativeVipArea.style.display = 'block'; confirmAlternativeVipBtn.disabled = false; alternativeVipSelect.disabled = false;
@@ -226,10 +313,10 @@ async function handleVipAction(accepted) { // Handles branching between Accept a
 }
 undoAdvanceBtn.addEventListener('click', async () => { if (!state.previousRotationState) { alert("No undo state."); return; } if (confirm("Undo last advancement?")) { undoAdvanceBtn.disabled = true; try { if (typeof state.previousRotationState !== 'object' || state.previousRotationState === null) { throw new Error("Invalid undo data."); } state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState)); state.previousRotationState = null; await updateFirestoreState(); } catch (error) { console.error("Undo error:", error); alert("Undo error: " + error.message); } } });
 // Theme Toggle Listener Removed
-resetBtn.addEventListener('click', async () => { // Updated to clear new lists/maps
+resetBtn.addEventListener('click', async () => {
     if (confirm("!! WARNING !! Reset ALL data?")) {
         console.warn("Resetting data!"); resetBtn.disabled = true; const today = new Date(); const nextM = findNextMonday(today); const nextMStr = getISODateString(nextM);
-        state.members = initialMembers.map(m => ({...m}));
+        state.members = initialMembers.map(m => ({...m, id: m.id || generateId()})); // Ensure IDs are kept/generated
         state.rotationState = { currentDate: nextMStr, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {}, alternativeVips: {}, completedSubstituteVipsThisRound: [] };
         state.previousRotationState = null;
         try { await updateFirestoreState(); alert("Data reset."); }
@@ -238,7 +325,7 @@ resetBtn.addEventListener('click', async () => { // Updated to clear new lists/m
 });
 
 // --- Initialization and Realtime Updates ---
-stateDocRef.onSnapshot((doc) => { // Updated to load new lists/maps
+stateDocRef.onSnapshot((doc) => {
     console.log("FS data received/updated."); let needsInitialSetup=false; let needsDateUpdate=false;
     if(doc.exists){
         const data=doc.data(); const localPrev=state.previousRotationState; const loadedMembers=(data.members||[]).map(m=>({...m, id: m.id||generateId()})); const loadedRotState=data.rotationState||{};
@@ -252,7 +339,8 @@ stateDocRef.onSnapshot((doc) => { // Updated to load new lists/maps
     if(needsInitialSetup||needsDateUpdate){
         console.log(`Setup: Initial=${needsInitialSetup}, DateUpdate=${needsDateUpdate}`); const today=new Date(); const nextM=findNextMonday(today); const nextMStr=getISODateString(nextM);
         if(needsInitialSetup){
-             state={ members:initialMembers.map(m=>({...m})), rotationState:{currentDate:nextMStr, r4r5Index:0, memberIndex:0, skippedVips:[], selectedMvps:{}, vipCounts:{}, mvpCounts:{}, alternativeVips:{}, completedSubstituteVipsThisRound:[]}, previousRotationState:null };
+             // Use the provided initialMembers list
+             state={ members:initialMembers.map(m=>({...m, id: m.id || generateId()})), rotationState:{currentDate:nextMStr, r4r5Index:0, memberIndex:0, skippedVips:[], selectedMvps:{}, vipCounts:{}, mvpCounts:{}, alternativeVips:{}, completedSubstituteVipsThisRound:[]}, previousRotationState:null };
              updateFirestoreState().catch(err=>console.error("Initial save FAIL:", err));
         } else if(needsDateUpdate){
             state.rotationState.currentDate=nextMStr;
@@ -261,6 +349,6 @@ stateDocRef.onSnapshot((doc) => { // Updated to load new lists/maps
             updateFirestoreState().catch(err=>console.error("Date update save FAIL:", err));
         }
     }
-    render(); resetBtn.disabled=false; // Enable reset button after load/init
+    render(); resetBtn.disabled=false;
 }, (error) => { console.error("FS Listener ERROR:", error); alert(`FATAL DB ERROR (${error.message}). Check connection, config, rules, console.`); document.getElementById('vip-actions').style.display='none'; /* ... disable more UI on error ... */ });
 // --- Initial Theme Render Removed ---
