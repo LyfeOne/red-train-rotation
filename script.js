@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "3.7"; // Set to 2.0 as requested
+const SCRIPT_VERSION = "3.7"; // Set to next version on change
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
