@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "4.8"; // Corrected final member list & reset date fix
+const SCRIPT_VERSION = "4.9"; // EXACT provided member list & reset date fix
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -17,108 +17,106 @@ const stateDocRef = db.collection("rotationState").doc("s749_state");
 const MVP_TECH_DAY = 1; const MVP_VS_DAY = 0; const RANKS = ["Member", "R4", "R5"];
 let state = { members: [], rotationState: { currentDate: null, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {}, alternativeVips: {}, completedSubstituteVipsThisRound: [] }, previousRotationState: null };
 
-// --- Initial Data (CORRECTED Member List - 96 Members from final user list) ---
+// --- Initial Data (EXACTLY from user list - 96 Members) ---
 const initialMembers = [
-    { name: "LadyLaik", rank: "R5"},
-    { name: "CornFlakes", rank: "R4"},
-    { name: "DaVinnie", rank: "R4"},
-    { name: "Enyaisrave", rank: "R4"},
-    { name: "Johcar", rank: "R4"},
-    { name: "Lyfe", rank: "R4"},
-    { name: "Motherfrogger", rank: "R4"},
-    { name: "NymbleV", rank: "R4"},
-    { name: "Pabs64", rank: "R4"},
-    { name: "Supersebb", rank: "R4"},
-    { name: "АЛЕКС1980", rank: "Member"},
-    { name: "Ado1111", rank: "Member"},
-    { name: "Aminos77", rank: "Member"},
-    { name: "Arczos", rank: "Member"},
-    { name: "B1wizz", rank: "Member"},
-    { name: "Be a wolf", rank: "Member"},
-    { name: "Bekim1", rank: "Member"},
-    { name: "BlackPush", rank: "Member"},
-    { name: "BlackWizardUA", rank: "Member"},
-    { name: "blacky12345", rank: "Member"},
-    { name: "BLÀDE", rank: "Member"},
-    { name: "BOREDOFTHISSHTGAME", rank: "Member"},
-    { name: "Caretta", rank: "Member"},
-    { name: "Chasseur 777", rank: "Member"},
-    { name: "Cocsi29400", rank: "Member"},
-    { name: "Commander BLad", rank: "Member"},
-    { name: "Chris (Smash)", rank: "Member"},
-    { name: "CurseTea", rank: "Member"},
-    { name: "Darkknight", rank: "Member"},
-    { name: "Dario217", rank: "Member"},
-    { name: "depechefann", rank: "Member"},
-    { name: "Dfyra", rank: "Member"},
-    { name: "DiamondDixie", rank: "Member"},
-    { name: "diRty freNk", rank: "Member"},
-    { name: "Edx77", rank: "Member"},
-    { name: "Ever4", rank: "Member"},
-    { name: "F L A C", rank: "Member"},
-    { name: "Faluche", rank: "Member"},
-    { name: "FireXice (Bibot)", rank: "Member"},
-    { name: "Foggis", rank: "Member"},
-    { name: "GhósT", rank: "Member"},
-    { name: "Gekkegerrittttt", rank: "Member"},
-    { name: "GoFireES", rank: "Member"},
-    { name: "Gorkiules", rank: "Member"},
-    { name: "Gunnovic", rank: "Member"},
-    { name: "ILYES B", rank: "Member"},
-    { name: "IRONHAMMER", rank: "Member"},
-    { name: "Jaista", rank: "Member"},
-    { name: "jarako", rank: "Member"},
-    { name: "jassådu", rank: "Member"},
-    { name: "Jotersan", rank: "Member"},
-    { name: "Juantxo79", rank: "Member"},
-    { name: "Juggernaut x", rank: "Member"},
-    { name: "KezuaL", rank: "Member"},
-    { name: "KFCPov3r", rank: "Member"},
-    { name: "KingStridez", rank: "Member"},
-    { name: "koppies", rank: "Member"},
-    { name: "KPShafty", rank: "Member"},
-    { name: "Kyuchie", rank: "Member"},
-    { name: "Laeta", rank: "Member"},
-    { name: "Leka98", rank: "Member"},
-    { name: "Llama deDrama", rank: "Member"},
-    { name: "Lutonian", rank: "Member"},
-    { name: "Mala Mimi", rank: "Member"},
-    { name: "Maytos", rank: "Member"},
-    { name: "Megalomanie", rank: "Member"},
-    { name: "Meloziaa", rank: "Member"},
-    { name: "MRan", rank: "Member"},
-    { name: "NinoDelBono", rank: "Member"},
-    { name: "Nohardfeelz", rank: "Member"},
-    { name: "Novis01", rank: "Member"},
-    { name: "Oliviax", rank: "Member"},
-    { name: "olabaf", rank: "Member"},
-    { name: "oo APACHE oo", rank: "Member"},
-    { name: "Peckap", rank: "Member"},
-    { name: "Prantuan", rank: "Member"},
-    { name: "RaMbo0", rank: "Member"},
-    { name: "Raph911", rank: "Member"},
-    { name: "Rev T", rank: "Member"},
-    { name: "Rikkyyyyy", rank: "Member"},
-    { name: "S A M U R A i", rank: "Member"},
-    { name: "Sarajevo Mfrcs", rank: "Member"},
-    { name: "SkyWinder", rank: "Member"},
-    { name: "Smâsh", rank: "Member"},
-    { name: "Smugwell", rank: "Member"},
-    { name: "Swisskilla", rank: "Member"},
-    { name: "Temd", rank: "Member"},
-    { name: "TermiGator", rank: "Member"},
-    { name: "TheFloh", rank: "Member"},
-    { name: "theFoxXx", rank: "Member"},
-    { name: "Thirteen Squid", rank: "Member"},
-    { name: "Umbra XIII", rank: "Member"},
-    { name: "Vechniy", rank: "Member"},
-    { name: "Villanueva 1", rank: "Member"},
-    { name: "xAishaRosex", rank: "Member"},
-    { name: "xPerseus", rank: "Member"},
-    { name: "Xyz111111", rank: "Member"},
-    { name: "Zoorglub", rank: "Member"},
-    { name: "ЖЭКА", rank: "Member"}
-].map(m => ({ ...m, id: m.id || generateId() }));
+    { name: "LadyLaik", rank: "R5"},         // 1
+    { name: "CornFlakes", rank: "R4"},       // 2
+    { name: "DaVinnie", rank: "R4"},         // 3
+    { name: "Enyaisrave", rank: "R4"},       // 4
+    { name: "Johcar", rank: "R4"},           // 5
+    { name: "Lyfe", rank: "R4"},             // 6
+    { name: "Motherfrogger", rank: "R4"},    // 7
+    { name: "NymbleV", rank: "R4"},          // 8
+    { name: "Pabs64", rank: "R4"},           // 9
+    { name: "Supersebb", rank: "R4"},        // 10
+    { name: "АЛЕКС1980", rank: "Member"},    // 11
+    { name: "Ado1111", rank: "Member"},      // 12
+    { name: "Aminos77", rank: "Member"},     // 13
+    { name: "Arczos", rank: "Member"},       // 14
+    { name: "B1wizz", rank: "Member"},       // 15
+    { name: "Be a wolf", rank: "Member"},    // 16
+    { name: "Bekim1", rank: "Member"},       // 17
+    { name: "BlackPush", rank: "Member"},    // 18
+    { name: "BlackWizardUA", rank: "Member"}, // 19
+    { name: "blacky12345", rank: "Member"},  // 20
+    { name: "BLÀDE", rank: "Member"},        // 21
+    { name: "BOREDOFTHISSHTGAME", rank: "Member"}, // 22
+    { name: "Caretta", rank: "Member"},      // 23
+    { name: "Chasseur 777", rank: "Member"}, // 24
+    { name: "Cocsi29400", rank: "Member"},   // 25
+    { name: "Commander BLad", rank: "Member"},// 26
+    { name: "Dario217", rank: "Member"},     // 27
+    { name: "Darkknight", rank: "Member"},   // 28
+    { name: "depechefann", rank: "Member"},  // 29
+    { name: "Dfyra", rank: "Member"},        // 30
+    { name: "DiamondDixie", rank: "Member"}, // 31
+    { name: "diRty freNk", rank: "Member"},  // 32
+    { name: "Edx77", rank: "Member"},        // 33
+    { name: "Ever4", rank: "Member"},        // 34
+    { name: "F L A C", rank: "Member"},      // 35
+    { name: "Faluche", rank: "Member"},      // 36
+    { name: "FireXice (Bibot)", rank: "Member"}, // 37
+    { name: "Foggis", rank: "Member"},       // 38
+    { name: "GhósT", rank: "Member"},        // 39
+    { name: "Gekkegerrittttt", rank: "Member"},// 40
+    { name: "GoFireES", rank: "Member"},     // 41
+    { name: "Gorkiules", rank: "Member"},    // 42
+    { name: "Gunnovic", rank: "Member"},     // 43
+    { name: "ILYES B", rank: "Member"},      // 44
+    { name: "IRONHAMMER", rank: "Member"},   // 45
+    { name: "Jaista", rank: "Member"},       // 46
+    { name: "jarako", rank: "Member"},       // 47
+    { name: "jassådu", rank: "Member"},      // 48
+    { name: "Jotersan", rank: "Member"},     // 49
+    { name: "Juantxo79", rank: "Member"},    // 50
+    { name: "Juggernaut x", rank: "Member"}, // 51
+    { name: "KezuaL", rank: "Member"},       // 52
+    { name: "KFCPov3r", rank: "Member"},     // 53
+    { name: "KingStridez", rank: "Member"},  // 54
+    { name: "koppies", rank: "Member"},      // 55
+    { name: "KPShafty", rank: "Member"},     // 56
+    { name: "Kyuchie", rank: "Member"},      // 57
+    { name: "Laeta", rank: "Member"},        // 58
+    { name: "Leka98", rank: "Member"},       // 59
+    { name: "Llama deDrama", rank: "Member"},// 60
+    { name: "Lutonian", rank: "Member"},     // 61
+    { name: "Mala Mimi", rank: "Member"},    // 62
+    { name: "Maytos", rank: "Member"},       // 63
+    { name: "Megalomanie", rank: "Member"},  // 64
+    { name: "Meloziaa", rank: "Member"},     // 65
+    { name: "MRan", rank: "Member"},         // 66
+    { name: "NinoDelBono", rank: "Member"},  // 67
+    { name: "Nohardfeelz", rank: "Member"},  // 68
+    { name: "Novis01", rank: "Member"},      // 69
+    { name: "Oliviax", rank: "Member"},      // 70
+    { name: "olabaf", rank: "Member"},       // 71
+    { name: "oo APACHE oo", rank: "Member"}, // 72
+    { name: "Peckap", rank: "Member"},       // 73
+    { name: "Prantuan", rank: "Member"},     // 74
+    { name: "RaMbo0", rank: "Member"},       // 75
+    { name: "Raph911", rank: "Member"},      // 76
+    { name: "Rev T", rank: "Member"},        // 77
+    { name: "Rikkyyyyy", rank: "Member"},    // 78
+    { name: "S A M U R A i", rank: "Member"},// 79
+    { name: "Sarajevo Mfrcs", rank: "Member"},// 80
+    { name: "SkyWinder", rank: "Member"},    // 81
+    { name: "Smâsh", rank: "Member"},        // 82
+    { name: "Smugwell", rank: "Member"},     // 83
+    { name: "Swisskilla", rank: "Member"},   // 84
+    { name: "Temd", rank: "Member"},         // 85
+    // { name: "TermiGator", rank: "Member"}, // Removed - Nicht in der letzten Liste
+    { name: "TheFloh", rank: "Member"},      // 86
+    { name: "theFoxXx", rank: "Member"},     // 87
+    { name: "Thirteen Squid", rank: "Member"},// 88
+    { name: "Umbra XIII", rank: "Member"},   // 89
+    { name: "Vechniy", rank: "Member"},      // 90
+    { name: "Villanueva 1", rank: "Member"}, // 91
+    { name: "xAishaRosex", rank: "Member"},  // 92
+    { name: "xPerseus", rank: "Member"},     // 93
+    { name: "Xyz111111", rank: "Member"},    // 94
+    { name: "Zoorglub", rank: "Member"},     // 95
+    { name: "ЖЭКА", rank: "Member"}         // 96
+].map(m => ({ ...m, id: m.id || generateId() })); // Ensure IDs exist
 
 // --- DOM Elements ---
 const memberListEl = document.getElementById('member-list'); const addMemberForm = document.getElementById('add-member-form'); const newMemberNameInput = document.getElementById('new-member-name'); const newMemberRankSelect = document.getElementById('new-member-rank'); const memberCountEl = document.getElementById('member-count'); const currentDateEl = document.getElementById('current-date'); const currentDayOfWeekEl = document.getElementById('current-day-of-week'); const currentConductorEl = document.getElementById('current-conductor'); const currentVipEl = document.getElementById('current-vip'); const skippedVipsListEl = document.getElementById('skipped-vips').querySelector('ul'); const scheduleDisplayListEl = document.getElementById('schedule-display').querySelector('ul'); const vipAcceptedBtn = document.getElementById('vip-accepted'); const vipSkippedBtn = document.getElementById('vip-skipped'); const undoAdvanceBtn = document.getElementById('undo-advance'); const mvpSelectionArea = document.getElementById('mvp-selection-area'); const mvpSelect = document.getElementById('mvp-select');
@@ -305,7 +303,7 @@ async function handleVipAction(accepted) {
     if (accepted) { // ACCEPT PATH
         try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); } catch (e) { console.error("Undo store error:", e); state.previousRotationState = null; }
         const success = advanceRotation(true, selectedMvpId);
-        if (success) { try { await updateFirestoreState(); undoAdvanceBtn.disabled = !state.previousRotationState; } catch (error) { console.error("handleVipAction(Accept): Save FAIL:", error); alert("Error saving. Check console!"); renderCurrentDay(); } } else { console.warn("handleVipAction(Accept): advanceRotation failed"); renderCurrentDay(); }
+        if (success) { try { await updateFirestoreState(); undoAdvanceBtn.disabled = !state.previousRotationState; } catch (error) { console.error("handleVipAction(Accept): Save FAIL:", error); alert("Error saving. Check console!"); renderCurrentDay(); } } else { renderCurrentDay(); }
     } else { // SKIP PATH
         const { vip: proposedVip } = calculateDailyAssignments( currentDateStr, state.rotationState.r4r5Index ?? 0, state.rotationState.memberIndex ?? 0, state.rotationState.skippedVips || [], state.rotationState.selectedMvps || {}, state.rotationState.completedSubstituteVipsThisRound || [] ); if (!proposedVip?.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) { alert("Cannot process skip: No valid VIP was proposed."); renderCurrentDay(); return; }
         alternativeVipArea.dataset.originalVipId = proposedVip.id; alternativeVipArea.dataset.selectedMvpId = selectedMvpId || ""; originalSkippedVipNameEl.textContent = proposedVip.name || "The proposed VIP";
@@ -314,7 +312,7 @@ async function handleVipAction(accepted) {
 }
 undoAdvanceBtn.addEventListener('click', async () => { if (!state.previousRotationState) { alert("No undo state."); return; } if (confirm("Undo last advancement?")) { undoAdvanceBtn.disabled = true; try { if (typeof state.previousRotationState !== 'object' || state.previousRotationState === null) { throw new Error("Invalid undo data."); } state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState)); state.previousRotationState = null; await updateFirestoreState(); } catch (error) { console.error("Undo error:", error); alert("Undo error: " + error.message); } } });
 // Theme Toggle Listener Removed
-resetBtn.addEventListener('click', async () => { // Updated to clear new lists/maps & use fixed start date
+resetBtn.addEventListener('click', async () => {
     if (confirm("!! WARNING !! Reset ALL data? This cannot be undone!")) {
         console.warn("Resetting data!"); resetBtn.disabled = true;
         const resetDateStr = "2025-04-21"; // Fixed start date
@@ -329,9 +327,9 @@ resetBtn.addEventListener('click', async () => { // Updated to clear new lists/m
 });
 
 // --- Initialization and Realtime Updates ---
-stateDocRef.onSnapshot((doc) => { // Updated to load new lists/maps & fixed start date
+stateDocRef.onSnapshot((doc) => {
     console.log("FS data received/updated."); let needsInitialSetup=false; let needsDateUpdate=false;
-    const fixedStartDate = "2025-04-21"; // Definiere das feste Startdatum hier
+    const fixedStartDate = "2025-04-21";
 
     if(doc.exists){
         const data=doc.data(); const localPrev=state.previousRotationState; const loadedMembers=(data.members||[]).map(m=>({...m, id: m.id||generateId()})); const loadedRotState=data.rotationState||{};
@@ -342,19 +340,19 @@ stateDocRef.onSnapshot((doc) => { // Updated to load new lists/maps & fixed star
         }, previousRotationState:localPrev };
         if(!state.rotationState.currentDate||isNaN(new Date(state.rotationState.currentDate+'T00:00:00Z'))){
              console.warn("Loaded state missing or has invalid currentDate. Setting to fixed start date.");
-             needsDateUpdate=true; // Flag setzen, um Datum zu überschreiben
+             needsDateUpdate=true;
         }
     } else { console.log("No FS doc. Initial setup..."); needsInitialSetup=true; }
 
     if(needsInitialSetup||needsDateUpdate){
-        const startDate = fixedStartDate; // Verwende immer das feste Startdatum
+        const startDate = fixedStartDate;
         console.log(`Setup/Update: Initial=${needsInitialSetup}, DateUpdate=${needsDateUpdate}. Setting start date to: ${startDate}`);
 
         if(needsInitialSetup){
-             // Use the initialMembers list from this script
+             // Use the provided initialMembers list and ensure IDs are generated/kept
              state={ members:initialMembers.map(m=>({...m, id: m.id || generateId()})), rotationState:{currentDate:startDate, r4r5Index:0, memberIndex:0, skippedVips:[], selectedMvps:{}, vipCounts:{}, mvpCounts:{}, alternativeVips:{}, completedSubstituteVipsThisRound:[]}, previousRotationState:null };
              updateFirestoreState().catch(err=>console.error("Initial save FAIL:", err));
-        } else if(needsDateUpdate){ // Nur Datum aktualisieren wenn nötig
+        } else if(needsDateUpdate){
             state.rotationState.currentDate=startDate;
             if (!state.rotationState.alternativeVips) { state.rotationState.alternativeVips = {}; }
             if (!state.rotationState.completedSubstituteVipsThisRound) { state.rotationState.completedSubstituteVipsThisRound = []; }
