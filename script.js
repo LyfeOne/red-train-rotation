@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "4.7"; // Corrected member list & reset date fix
+const SCRIPT_VERSION = "4.8"; // Corrected final member list & reset date fix
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -17,7 +17,7 @@ const stateDocRef = db.collection("rotationState").doc("s749_state");
 const MVP_TECH_DAY = 1; const MVP_VS_DAY = 0; const RANKS = ["Member", "R4", "R5"];
 let state = { members: [], rotationState: { currentDate: null, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {}, alternativeVips: {}, completedSubstituteVipsThisRound: [] }, previousRotationState: null };
 
-// --- Initial Data (Corrected Member List - 96 Members) ---
+// --- Initial Data (CORRECTED Member List - 96 Members from final user list) ---
 const initialMembers = [
     { name: "LadyLaik", rank: "R5"},
     { name: "CornFlakes", rank: "R4"},
@@ -26,7 +26,6 @@ const initialMembers = [
     { name: "Johcar", rank: "R4"},
     { name: "Lyfe", rank: "R4"},
     { name: "Motherfrogger", rank: "R4"},
-    // { name: "Munky", rank: "R4"}, // Removed - Was not in the provided list
     { name: "NymbleV", rank: "R4"},
     { name: "Pabs64", rank: "R4"},
     { name: "Supersebb", rank: "R4"},
@@ -49,12 +48,12 @@ const initialMembers = [
     { name: "Chris (Smash)", rank: "Member"},
     { name: "CurseTea", rank: "Member"},
     { name: "Darkknight", rank: "Member"},
-    { name: "Dario217", rank: "Member"}, // Kept Dario217 as it was in earlier consistent lists
+    { name: "Dario217", rank: "Member"},
     { name: "depechefann", rank: "Member"},
     { name: "Dfyra", rank: "Member"},
     { name: "DiamondDixie", rank: "Member"},
     { name: "diRty freNk", rank: "Member"},
-    { name: "Edx77", rank: "Member"}, // Kept Edx77 as provided
+    { name: "Edx77", rank: "Member"},
     { name: "Ever4", rank: "Member"},
     { name: "F L A C", rank: "Member"},
     { name: "Faluche", rank: "Member"},
@@ -119,7 +118,7 @@ const initialMembers = [
     { name: "Xyz111111", rank: "Member"},
     { name: "Zoorglub", rank: "Member"},
     { name: "ЖЭКА", rank: "Member"}
-].map(m => ({ ...m, id: m.id || generateId() })); // Ensure IDs exist
+].map(m => ({ ...m, id: m.id || generateId() }));
 
 // --- DOM Elements ---
 const memberListEl = document.getElementById('member-list'); const addMemberForm = document.getElementById('add-member-form'); const newMemberNameInput = document.getElementById('new-member-name'); const newMemberRankSelect = document.getElementById('new-member-rank'); const memberCountEl = document.getElementById('member-count'); const currentDateEl = document.getElementById('current-date'); const currentDayOfWeekEl = document.getElementById('current-day-of-week'); const currentConductorEl = document.getElementById('current-conductor'); const currentVipEl = document.getElementById('current-vip'); const skippedVipsListEl = document.getElementById('skipped-vips').querySelector('ul'); const scheduleDisplayListEl = document.getElementById('schedule-display').querySelector('ul'); const vipAcceptedBtn = document.getElementById('vip-accepted'); const vipSkippedBtn = document.getElementById('vip-skipped'); const undoAdvanceBtn = document.getElementById('undo-advance'); const mvpSelectionArea = document.getElementById('mvp-selection-area'); const mvpSelect = document.getElementById('mvp-select');
@@ -134,11 +133,9 @@ function getDayOfWeek(date) { return date.getDay(); } // 0=Sun, 1=Mon
 function formatDate(date) { if (!(date instanceof Date) || isNaN(date)) return "Invalid Date"; return date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }); }
 function getISODateString(date) { if (!(date instanceof Date) || isNaN(date)) { console.error("Invalid date:", date); return new Date().toISOString().split('T')[0]; } return date.toISOString().split('T')[0]; }
 function addDays(date, days) { const result = new Date(date); result.setDate(result.getDate() + days); return result; }
-// --- Corrected findNextMonday ---
-function findNextMonday(date) {
+function findNextMonday(date) { // Corrected version
     const currentDay = getDayOfWeek(date);
     const daysToAdd = (1 - currentDay + 7) % 7;
-    //console.log(`findNextMonday: Today is ${currentDay}, adding ${daysToAdd} days.`); // Debug Log removed
     return addDays(date, daysToAdd);
 }
 function getMemberById(id) { return state.members?.find(m => m?.id === id); }
@@ -202,7 +199,7 @@ function advanceRotation(vipAccepted, selectedMvpId = null) { // Handles ACCEPT 
      state.rotationState.alternativeVips = currentAlternativeVips; state.rotationState.completedSubstituteVipsThisRound = finalSubstituteList;
      return true;
 }
-function updateFirestoreState() {
+function updateFirestoreState() { // Updated to save new substitute list
     const stateToSave={ members:state.members||[], rotationState:{ currentDate:state.rotationState.currentDate, r4r5Index:state.rotationState.r4r5Index??0, memberIndex:state.rotationState.memberIndex??0, skippedVips:state.rotationState.skippedVips||[], selectedMvps:state.rotationState.selectedMvps||{}, vipCounts:state.rotationState.vipCounts||{}, mvpCounts:state.rotationState.mvpCounts||{}, alternativeVips: state.rotationState.alternativeVips || {}, completedSubstituteVipsThisRound: state.rotationState.completedSubstituteVipsThisRound || [] } };
     return stateDocRef.set(stateToSave).then(()=>{/* Success */}).catch((e)=>{console.error("FS write FAIL:", e); alert(`Save Error: ${e.message}`); throw e;});
 }
@@ -239,7 +236,7 @@ function renderSchedule() { // Cleaned up logs
               if (wasVipFromSkippedList) { tempSkipped.shift(); }
           }
           if (vipProcessed) { memIdx = effectiveMemberIndex + 1; }
-          else { memIdx = effectiveMemberIndex; } // Keep the index if no valid VIP processed
+          else { memIdx = effectiveMemberIndex; }
           if (day >= 2 && day <= 6) { r4r5Idx++; }
           date = addDays(date, 1);
      }
@@ -317,24 +314,22 @@ async function handleVipAction(accepted) {
 }
 undoAdvanceBtn.addEventListener('click', async () => { if (!state.previousRotationState) { alert("No undo state."); return; } if (confirm("Undo last advancement?")) { undoAdvanceBtn.disabled = true; try { if (typeof state.previousRotationState !== 'object' || state.previousRotationState === null) { throw new Error("Invalid undo data."); } state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState)); state.previousRotationState = null; await updateFirestoreState(); } catch (error) { console.error("Undo error:", error); alert("Undo error: " + error.message); } } });
 // Theme Toggle Listener Removed
-resetBtn.addEventListener('click', async () => { // Updated to clear new lists/maps
+resetBtn.addEventListener('click', async () => { // Updated to clear new lists/maps & use fixed start date
     if (confirm("!! WARNING !! Reset ALL data? This cannot be undone!")) {
         console.warn("Resetting data!"); resetBtn.disabled = true;
-        // Use fixed reset date
-        const resetDateStr = "2025-04-21"; // Montag, 21. April 2025
+        const resetDateStr = "2025-04-21"; // Fixed start date
         console.log("Resetting state to start date:", resetDateStr);
 
-        // Use the provided initialMembers list and ensure IDs are generated/kept
-        state.members = initialMembers.map(m => ({...m, id: m.id || generateId()}));
+        state.members = initialMembers.map(m => ({...m, id: m.id || generateId()})); // Use updated list
         state.rotationState = { currentDate: resetDateStr, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {}, alternativeVips: {}, completedSubstituteVipsThisRound: [] };
         state.previousRotationState = null;
-        try { await updateFirestoreState(); alert("Data has been reset to defaults, starting from April 21, 2025."); }
+        try { await updateFirestoreState(); alert(`Data has been reset to defaults, starting from ${formatDate(new Date(resetDateStr + 'T00:00:00Z'))}.`); }
         catch (error) { console.error("Reset error:", error); alert("Error resetting data."); resetBtn.disabled = false; }
     }
 });
 
 // --- Initialization and Realtime Updates ---
-stateDocRef.onSnapshot((doc) => {
+stateDocRef.onSnapshot((doc) => { // Updated to load new lists/maps & fixed start date
     console.log("FS data received/updated."); let needsInitialSetup=false; let needsDateUpdate=false;
     const fixedStartDate = "2025-04-21"; // Definiere das feste Startdatum hier
 
@@ -346,7 +341,7 @@ stateDocRef.onSnapshot((doc) => {
             completedSubstituteVipsThisRound: loadedRotState.completedSubstituteVipsThisRound || []
         }, previousRotationState:localPrev };
         if(!state.rotationState.currentDate||isNaN(new Date(state.rotationState.currentDate+'T00:00:00Z'))){
-             console.warn("Loaded state missing or has invalid currentDate. Resetting to fixed start date.");
+             console.warn("Loaded state missing or has invalid currentDate. Setting to fixed start date.");
              needsDateUpdate=true; // Flag setzen, um Datum zu überschreiben
         }
     } else { console.log("No FS doc. Initial setup..."); needsInitialSetup=true; }
@@ -356,6 +351,7 @@ stateDocRef.onSnapshot((doc) => {
         console.log(`Setup/Update: Initial=${needsInitialSetup}, DateUpdate=${needsDateUpdate}. Setting start date to: ${startDate}`);
 
         if(needsInitialSetup){
+             // Use the initialMembers list from this script
              state={ members:initialMembers.map(m=>({...m, id: m.id || generateId()})), rotationState:{currentDate:startDate, r4r5Index:0, memberIndex:0, skippedVips:[], selectedMvps:{}, vipCounts:{}, mvpCounts:{}, alternativeVips:{}, completedSubstituteVipsThisRound:[]}, previousRotationState:null };
              updateFirestoreState().catch(err=>console.error("Initial save FAIL:", err));
         } else if(needsDateUpdate){ // Nur Datum aktualisieren wenn nötig
