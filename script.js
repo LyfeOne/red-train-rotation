@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "5.1"; // History Fix
+const SCRIPT_VERSION = "5.3"; // Added History Feature & Corrected Member List
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -73,28 +73,14 @@ function calculateDailyAssignments(targetDateStr, currentR4R5Index, currentMembe
 
 // --- NEUE FUNKTION: Speichert den Verlauf für einen abgeschlossenen Tag ---
 function recordDailyHistory(dateStr, conductorId, vipId, status) {
-    if (!dateStr || !conductorId || !vipId) {
-        console.error("Missing data for recording history:", { dateStr, conductorId, vipId, status });
-        return; // Exit if essential data is missing
-    }
+    if (!dateStr || !conductorId || !vipId) { return; }
     const conductor = getMemberById(conductorId);
     const vip = getMemberById(vipId);
-
-    // Ensure history object exists in state
-    if (!state.rotationState.dailyHistory) {
-        state.rotationState.dailyHistory = {};
-    }
-
+    if (!state.rotationState.dailyHistory) { state.rotationState.dailyHistory = {}; }
     state.rotationState.dailyHistory[dateStr] = {
-        conductorId: conductorId,
-        conductorName: conductor ? conductor.name : `ID:${conductorId}`, // Fallback to ID if member removed
-        conductorRank: conductor ? conductor.rank : 'N/A',
-        vipId: vipId,
-        vipName: vip ? vip.name : `ID:${vipId}`, // Fallback to ID
-        vipRank: vip ? vip.rank : 'N/A',
-        status: status
+        conductorId: conductorId, conductorName: conductor ? conductor.name : `ID:${conductorId}`, conductorRank: conductor ? conductor.rank : 'N/A',
+        vipId: vipId, vipName: vip ? vip.name : `ID:${vipId}`, vipRank: vip ? vip.rank : 'N/A', status: status
     };
-    // console.log(`History recorded for ${dateStr}:`, state.rotationState.dailyHistory[dateStr]); // Debug Log removed
 }
 
 
@@ -104,12 +90,12 @@ function advanceRotation(vipAccepted, selectedMvpId = null) { // Handles ACCEPT 
      const currentR4R5Index = state.rotationState.r4r5Index ?? 0; const currentMemberIndex = state.rotationState.memberIndex ?? 0; const currentSkippedVips = [...(state.rotationState.skippedVips || [])]; const currentVipCounts = { ...(state.rotationState.vipCounts || {}) }; const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) }; const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) };
      const currentAlternativeVips = { ...(state.rotationState.alternativeVips || {}) };
      const currentSubstituteList = [...(state.rotationState.completedSubstituteVipsThisRound || [])];
-     // History is modified directly by recordDailyHistory
+     // History wird direkt modifiziert
 
      const { conductor: proposedConductor, vip: proposedVip, effectiveMemberIndex } = calculateDailyAssignments(currentDateStr, currentR4R5Index, currentMemberIndex, currentSkippedVips, currentSelectedMvps, currentSubstituteList);
      if (!proposedVip?.id || proposedVip.id.startsWith('NO_') || proposedVip.id.startsWith('ERROR_')) { alert("No valid VIP proposed."); return false; }
      const proposedVipId = proposedVip.id; let nextR4R5Index = currentR4R5Index; let nextMemberIndex = currentMemberIndex; let nextSkippedVips = currentSkippedVips.filter(id => getMemberById(id)); const wasVipFromSkippedList = nextSkippedVips.length > 0 && nextSkippedVips[0] === proposedVipId;
-     if (!vipAccepted) { return false; }
+     if (!vipAccepted) { return false; } // Nur für Accept
 
      nextMemberIndex = effectiveMemberIndex + 1;
      if (wasVipFromSkippedList) { nextSkippedVips.shift(); }
@@ -118,6 +104,7 @@ function advanceRotation(vipAccepted, selectedMvpId = null) { // Handles ACCEPT 
      const memberMembers = getMembersByRank('Member');
      let finalSubstituteList = currentSubstituteList;
      if (memberMembers.length > 0 && (nextMemberIndex % memberMembers.length === 0) && nextMemberIndex > 0) {
+         console.log("Round End detected! Clearing Substitute List.");
          finalSubstituteList = [];
      }
 
@@ -129,7 +116,7 @@ function advanceRotation(vipAccepted, selectedMvpId = null) { // Handles ACCEPT 
      const nextDate = addDays(currentDate, 1); const nextDateStr = getISODateString(nextDate);
      state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index; state.rotationState.memberIndex = nextMemberIndex; state.rotationState.skippedVips = nextSkippedVips; state.rotationState.selectedMvps = currentSelectedMvps; state.rotationState.vipCounts = currentVipCounts; state.rotationState.mvpCounts = currentMvpCounts;
      state.rotationState.alternativeVips = currentAlternativeVips; state.rotationState.completedSubstituteVipsThisRound = finalSubstituteList;
-     // History was already updated directly by recordDailyHistory
+     // History wurde bereits direkt modifiziert
      return true;
 }
 function updateFirestoreState() { // Updated to save history
@@ -154,21 +141,12 @@ function renderSchedule() { // Renders past days from history and future days vi
      const substitutes = state.rotationState.completedSubstituteVipsThisRound || [];
      const history = state.rotationState.dailyHistory || {};
      const today = new Date(state.rotationState.currentDate + 'T00:00:00Z');
+     if (isNaN(today)) { console.error("Current date is invalid, cannot render schedule."); return; }
 
      const daysToShowPast = 3;
-     const futureDaysNeeded = Math.max(7, members.length + skipped.length); // Enough future days
-     const totalDaysToRender = daysToShowPast + 1 + futureDaysNeeded; // Ensure enough overall
+     const futureDaysNeeded = Math.max(7, members.length > 0 ? members.length + skipped.length : 7);
 
-     let currentSimDate = addDays(today, -daysToShowPast); // Start rendering from past
-     let r4r5Idx = state.rotationState.r4r5Index ?? 0; // Need starting indices for simulation
-     let memIdx = state.rotationState.memberIndex ?? 0;
-     let tempSkipped = [...skipped]; // Use current skipped list for simulation start
-     let tempMvps = JSON.parse(JSON.stringify(state.rotationState.selectedMvps || {}));
-
-     // Adjust simulation start indices based on how many steps back we go (tricky, might need refinement)
-     // For simplicity, we'll just simulate forward from the *current* state for future days.
-
-     // Render past days from history
+     // Render past days
      for (let i = daysToShowPast; i >= 1; i--) {
          const pastDate = addDays(today, -i); const pastDateStr = getISODateString(pastDate);
          const historyEntry = history[pastDateStr];
@@ -183,12 +161,17 @@ function renderSchedule() { // Renders past days from history and future days vi
 
      // Render current and future days using simulation from current state
      let simDate = new Date(today);
+     let simR4R5Idx = state.rotationState.r4r5Index ?? 0;
+     let simMemIdx = state.rotationState.memberIndex ?? 0;
+     let tempSkipped = [...skipped];
+     let simMvps = JSON.parse(JSON.stringify(state.rotationState.selectedMvps || {}));
+
      for (let i = 0; i < futureDaysNeeded; i++) {
           if (isNaN(simDate)) { break; } const dateStr = getISODateString(simDate); const day = getDayOfWeek(simDate); const isCurrentDay = (i === 0);
-          const { conductor, vip, effectiveMemberIndex } = calculateDailyAssignments(dateStr, r4r5Idx, memIdx, tempSkipped, tempMvps, substitutes);
+          const { conductor, vip, effectiveMemberIndex } = calculateDailyAssignments(dateStr, simR4R5Idx, simMemIdx, tempSkipped, simMvps, substitutes);
 
           // Rendering
-          if (!conductor.id?.startsWith('ERR') && !vip.id?.startsWith('ERR') && vip.id !== 'NO_VALID_MEMBER') { const li = document.createElement('li'); if(isCurrentDay) li.classList.add('current-day'); const dS = document.createElement('span'); dS.classList.add('schedule-date'); dS.textContent = formatDate(simDate); const cS = document.createElement('span'); cS.classList.add('schedule-conductor'); const cN = conductor.name || "?"; const cR = conductor.rank || "N/A"; if (conductor.id === 'MVP_MON_SELECT' || conductor.id === 'MVP_SUN_SELECT') { const k = day === MVP_TECH_DAY ? `${dateStr}_Mon` : `${dateStr}_Sun`; if (tempMvps[k]) { const mvp = getMemberById(tempMvps[k]); cS.textContent = `C: ${mvp?.name || '?'} (MVP)`; } else { cS.innerHTML = `<span class="mvp-selection-required">${cN}</span>`; } } else { cS.textContent = `C: ${cN} (${cR})`; } const vS = document.createElement('span'); vS.classList.add('schedule-vip'); const vN = vip.name || "?"; const vR = vip.rank || "N/A"; if (vip.id === 'NO_MEMBERS' || vip.id.startsWith('ERR') || vip.id === 'NO_VALID_MEMBER') { vS.textContent = vN; } else { vS.textContent = `VIP: ${vN} (${vR})`; if (tempSkipped.length > 0 && tempSkipped[0] === vip.id) vS.textContent += ' (Skipped)'; } li.appendChild(dS); li.appendChild(cS); li.appendChild(vS); scheduleDisplayListEl.appendChild(li); }
+          if (!conductor.id?.startsWith('ERR') && !vip.id?.startsWith('ERR') && vip.id !== 'NO_VALID_MEMBER') { const li = document.createElement('li'); if(isCurrentDay) li.classList.add('current-day'); const dS = document.createElement('span'); dS.classList.add('schedule-date'); dS.textContent = formatDate(simDate); const cS = document.createElement('span'); cS.classList.add('schedule-conductor'); const cN = conductor.name || "?"; const cR = conductor.rank || "N/A"; if (conductor.id === 'MVP_MON_SELECT' || conductor.id === 'MVP_SUN_SELECT') { const k = day === MVP_TECH_DAY ? `${dateStr}_Mon` : `${dateStr}_Sun`; if (simMvps[k]) { const mvp = getMemberById(simMvps[k]); cS.textContent = `C: ${mvp?.name || '?'} (MVP)`; } else { cS.innerHTML = `<span class="mvp-selection-required">${cN}</span>`; } } else { cS.textContent = `C: ${cN} (${cR})`; } const vS = document.createElement('span'); vS.classList.add('schedule-vip'); const vN = vip.name || "?"; const vR = vip.rank || "N/A"; if (vip.id === 'NO_MEMBERS' || vip.id.startsWith('ERR') || vip.id === 'NO_VALID_MEMBER') { vS.textContent = vN; } else { vS.textContent = `VIP: ${vN} (${vR})`; if (tempSkipped.length > 0 && tempSkipped[0] === vip.id) vS.textContent += ' (Skipped)'; } li.appendChild(dS); li.appendChild(cS); li.appendChild(vS); scheduleDisplayListEl.appendChild(li); }
 
           // Simulation Step for next day
           let vipProcessed = false;
@@ -197,9 +180,9 @@ function renderSchedule() { // Renders past days from history and future days vi
               const wasVipFromSkippedList = tempSkipped.length > 0 && tempSkipped[0] === vip.id;
               if (wasVipFromSkippedList) { tempSkipped.shift(); }
           }
-          if (vipProcessed) { memIdx = effectiveMemberIndex + 1; }
-          else { memIdx = effectiveMemberIndex; }
-          if (day >= 2 && day <= 6) { r4r5Idx++; }
+          if (vipProcessed) { simMemIdx = effectiveMemberIndex + 1; }
+          else { simMemIdx = effectiveMemberIndex; }
+          if (day >= 2 && day <= 6) { simR4R5Idx++; }
           simDate = addDays(simDate, 1);
      }
 }
@@ -244,7 +227,7 @@ async function handleConfirmAlternativeVip() { // Counts alt VIP & Records Histo
      const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) }; const currentVipCounts = { ...(state.rotationState.vipCounts || {}) }; const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) };
      const currentAlternativeVips = { ...(state.rotationState.alternativeVips || {})};
      const currentSubstituteList = [...(state.rotationState.completedSubstituteVipsThisRound || [])];
-     const currentDailyHistory = { ...(state.rotationState.dailyHistory || {}) }; // Get current history
+     // History wird direkt modifiziert
 
      if (!currentSkippedVips.includes(originallySkippedVipId)) { currentSkippedVips.unshift(originallySkippedVipId); }
      let finalConductorId = null;
@@ -262,7 +245,7 @@ async function handleConfirmAlternativeVip() { // Counts alt VIP & Records Histo
      try { state.previousRotationState = JSON.parse(JSON.stringify(state.rotationState)); } catch (e) { state.previousRotationState = null; }
      state.rotationState.currentDate = nextDateStr; state.rotationState.r4r5Index = nextR4R5Index; state.rotationState.memberIndex = currentMemberIndex; state.rotationState.skippedVips = currentSkippedVips; state.rotationState.selectedMvps = currentSelectedMvps; state.rotationState.vipCounts = currentVipCounts; state.rotationState.mvpCounts = currentMvpCounts;
      state.rotationState.alternativeVips = currentAlternativeVips; state.rotationState.completedSubstituteVipsThisRound = finalSubstituteList;
-     state.rotationState.dailyHistory = currentDailyHistory; // Save updated history
+     // History wurde bereits direkt modifiziert
      try { await updateFirestoreState(); alternativeVipArea.style.display = 'none'; } catch (error) { console.error("Save fail after alt VIP:", error); alert("Error saving. Check console."); confirmAlternativeVipBtn.disabled = false; alternativeVipSelect.disabled = false; }
 }
 
@@ -288,11 +271,11 @@ async function handleVipAction(accepted) {
     }
 }
 undoAdvanceBtn.addEventListener('click', async () => { if (!state.previousRotationState) { alert("No undo state."); return; } if (confirm("Undo last advancement?")) { undoAdvanceBtn.disabled = true; try { if (typeof state.previousRotationState !== 'object' || state.previousRotationState === null) { throw new Error("Invalid undo data."); } state.rotationState = JSON.parse(JSON.stringify(state.previousRotationState)); state.previousRotationState = null; await updateFirestoreState(); } catch (error) { console.error("Undo error:", error); alert("Undo error: " + error.message); } } });
-resetBtn.addEventListener('click', async () => { // Updated to clear new fields & use fixed start date
+resetBtn.addEventListener('click', async () => { // Fixed start date & reset history
     if (confirm("!! WARNING !! Reset ALL data? This cannot be undone!")) {
         resetBtn.disabled = true; const resetDateStr = "2025-04-21";
-        state.members = initialMembers.map(m => ({...m, id: m.id || generateId()}));
-        state.rotationState = { currentDate: resetDateStr, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {}, alternativeVips: {}, completedSubstituteVipsThisRound: [], dailyHistory: {} };
+        state.members = initialMembers.map(m => ({...m, id: m.id || generateId()})); // Use updated list
+        state.rotationState = { currentDate: resetDateStr, r4r5Index: 0, memberIndex: 0, skippedVips: [], selectedMvps: {}, vipCounts: {}, mvpCounts: {}, alternativeVips: {}, completedSubstituteVipsThisRound: [], dailyHistory: {} }; // Reset history too
         state.previousRotationState = null;
         try { await updateFirestoreState(); alert(`Data has been reset to defaults, starting from ${formatDate(new Date(resetDateStr + 'T00:00:00Z'))}.`); }
         catch (error) { console.error("Reset error:", error); alert("Error resetting data."); resetBtn.disabled = false; }
@@ -300,7 +283,7 @@ resetBtn.addEventListener('click', async () => { // Updated to clear new fields 
 });
 
 // --- Initialization and Realtime Updates ---
-stateDocRef.onSnapshot((doc) => { // Updated to load history
+stateDocRef.onSnapshot((doc) => { // Load history
     console.log("FS data received/updated."); let needsInitialSetup=false; let needsDateUpdate=false;
     const fixedStartDate = "2025-04-21";
 
