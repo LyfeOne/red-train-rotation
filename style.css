@@ -1,4 +1,4 @@
-/* --- CSS (v11 - Schedule Display REVISED Flexbox Explicit Basis) --- */
+/* --- CSS (v13 - Admin Section Visible, Schedule Flexbox, History Style) --- */
 :root {
     /* --- Farbvariablen (unverändert) --- */
     --bg-color-light: #f4f4f8; --text-color-light: #333; --card-bg-light: #fff; --border-color-light: #ddd; --primary-color-light: #007bff; --primary-text-light: #fff; --accent-color-light: #6c757d; --accent-text-light: #fff; --highlight-bg-light: #e9ecef; --input-bg-light: #fff; --input-border-light: #ccc; --button-hover-light: #0056b3; --remove-btn-light: #dc3545; --remove-btn-hover-light: #c82333; --skipped-bg-light: #fff3cd; --skipped-text-light: #856404; --warning-bg-light: #ffeeba; --warning-text-light: #856404; --warning-border-light: #ffdab1; --last-completed-bg-light: #e2e3e5;
@@ -56,85 +56,28 @@ li span { margin-right: 10px; word-break: break-word; }
 #member-list li .member-info { display: flex; align-items: center; flex-grow: 1; margin-right: 10px; }
 .rank-select-inline { display: inline-block; width: auto; padding: 2px 5px; margin-left: 8px; font-size: 0.9em; background-color: var(--input-bg); color: var(--text-color); border: 1px solid var(--input-border); border-radius: 3px; vertical-align: middle; }
 
-/* --- Schedule Display (REVISED v5 - Flexbox with Explicit Basis) --- */
-#schedule-display ul {
-    padding: 0;
-    list-style: none;
+/* --- Schedule Display (Flexbox Approach) --- */
+#schedule-display ul { padding: 0; list-style: none; }
+#schedule-display ul li { display: flex; align-items: center; padding: 10px 5px; border-bottom: 1px dashed var(--border-color); gap: 10px; min-height: 40px; flex-wrap: nowrap; }
+#schedule-display ul li:last-child { border-bottom: none; }
+.schedule-date { flex: 0 0 115px; font-weight: bold; white-space: nowrap; text-align: left; margin: 0; padding: 0; }
+.schedule-conductor { flex: 2 1 180px; text-align: left; word-break: break-word; overflow-wrap: break-word; margin: 0; padding: 0; min-width: 100px; line-height: 1.4; padding-left: 10px; }
+.schedule-vip { flex: 1 1 150px; text-align: left; font-style: italic; color: var(--accent-color); word-break: break-word; overflow-wrap: break-word; margin: 0; padding: 0; min-width: 100px; line-height: 1.4; padding-left: 10px; }
+@media (min-width: 481px) { .schedule-conductor { min-width: 150px; } .schedule-vip { min-width: 130px; } }
+.mvp-selection-required { color: var(--remove-btn); font-weight: bold; }
+.schedule-vip span { font-style: normal; font-weight: normal; color: var(--skipped-text); margin-left: 5px; }
+#schedule-display ul li.current-day { background-color: var(--highlight-bg); font-weight: normal; border-left: 4px solid var(--primary-color); }
+#schedule-display ul li.current-day .schedule-date { font-weight: bold; }
+/* Style für vergangene Tage in der Schedule */
+#schedule-display ul li.past-day {
+    opacity: 0.7; /* Leicht ausgrauen */
+    font-size: 0.95em; /* Etwas kleiner */
 }
-#schedule-display ul li {
-    display: flex;           /* Flexbox für die Zeile */
-    align-items: center;     /* Vertikal zentrieren */
-    padding: 10px 5px;       /* Innenabstand */
-    border-bottom: 1px dashed var(--border-color);
-    gap: 10px;               /* Abstand zwischen den Spalten */
-    min-height: 40px;
-    flex-wrap: nowrap; /* Verhindert Umbruch auf Desktop, falls möglich */
+#schedule-display ul li.past-day .schedule-vip span { /* Zusätze wie (Accepted) etc. */
+     color: var(--accent-color); /* Weniger auffällig als Skipped-Farbe */
+     font-weight: normal;
 }
- #schedule-display ul li:last-child {
-    border-bottom: none;
- }
-
- .schedule-date {
-    /* Feste Breite, kein Wachsen/Schrumpfen */
-    flex: 0 0 115px; /* Basisbreite leicht angepasst */
-    font-weight: bold;
-    white-space: nowrap;
-    text-align: left;
-    margin: 0; padding: 0;
- }
- .schedule-conductor {
-    /* Kann wachsen (2 Teile), kann schrumpfen (1 Teil), Basisbreite 180px */
-    flex: 2 1 180px;
-    text-align: left;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    margin: 0; padding: 0;
-    min-width: 100px; /* Minimalbreite, bevor es unlesbar wird */
-    line-height: 1.4;
- }
- .schedule-vip {
-    /* Kann wachsen (1 Teil), kann schrumpfen (1 Teil), Basisbreite 150px */
-    flex: 1 1 150px;
-    text-align: left;
-    font-style: italic;
-    color: var(--accent-color);
-    word-break: break-word;
-    overflow-wrap: break-word;
-    margin: 0; padding: 0;
-    min-width: 100px; /* Minimalbreite */
-    line-height: 1.4;
- }
-
- /* Stelle sicher, dass die Spalten auf kleinen Bildschirmen nicht zu schmal werden */
- @media (min-width: 481px) { /* Nur anwenden wenn genug Platz ist */
-     .schedule-conductor { min-width: 150px; }
-     .schedule-vip { min-width: 130px; }
- }
-
-
- .mvp-selection-required {
-     color: var(--remove-btn);
-     font-weight: bold;
- }
- .schedule-vip span { /* Styling für "(Skipped)" etc. */
-    font-style: normal;
-    font-weight: normal;
-    color: var(--skipped-text);
-    margin-left: 5px;
- }
-
- /* Hebe aktuellen Tag hervor */
- #schedule-display ul li.current-day {
-    background-color: var(--highlight-bg);
-    font-weight: normal;
-    border-left: 4px solid var(--primary-color);
-    /* padding-left: 5px; /* Optional: kleiner Einzug */
- }
- #schedule-display ul li.current-day .schedule-date {
-     font-weight: bold;
- }
- /* --- Ende Schedule Display --- */
-
+/* --- Ende Schedule Display --- */
 
 #current-day-info { background-color: var(--highlight-bg); padding: 15px; border-radius: 5px; margin-bottom: 0; }
 #last-completed-day-info { margin-top: 0px; padding: 10px 15px; border-bottom: 1px solid var(--border-color); background-color: var(--last-completed-bg); font-size: 0.9em; }
@@ -154,7 +97,7 @@ li span { margin-right: 10px; word-break: break-word; }
 #mvp-stats li, #vip-stats li { padding: 5px 0; border-bottom: 1px dashed var(--border-color); display: flex; justify-content: space-between; font-size: 0.9em; }
 #mvp-stats li:last-child, #vip-stats li:last-child { border-bottom: none; }
 .stats-count { font-weight: bold; margin-left: 10px; min-width: 20px; text-align: right; }
-/* Theme Toggle Button removed */
+/* Admin Section Visible */
 .admin-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color); }
 .admin-section button { margin-right: 10px; }
 details > summary { cursor: pointer; font-weight: bold; font-size: 1.2em; margin-bottom: 10px; color: var(--accent-color); }
@@ -163,52 +106,5 @@ details > summary:hover { opacity: 0.8; }
 details[open] > summary { margin-bottom: 15px; }
 
 /* Mobile Anpassungen */
-@media (max-width: 768px) {
-    body { padding: 5px; }
-    .container { padding: 10px; }
-    h1 { font-size: 1.5em; }
-    h2 { font-size: 1.2em; }
-    button { font-size: 0.9em; padding: 8px 12px; }
-    /* Theme Toggle removed */
-
-    /* --- Schedule Anpassung für Mobile (Flexbox Column) --- */
-     @media (max-width: 650px) {
-        #schedule-display ul li {
-            flex-direction: column; /* Untereinander */
-            align-items: flex-start; /* Linksbündig */
-            gap: 4px; /* Kleinerer vertikaler Abstand */
-            padding: 8px 5px;
-            flex-wrap: nowrap; /* Kein Umbruch innerhalb der Spalte */
-        }
-        .schedule-date, .schedule-conductor, .schedule-vip {
-            flex-basis: auto; /* Basisbreite automatisch anpassen */
-            width: 100%;      /* Volle Breite nehmen */
-            min-width: unset; /* Keine Mindestbreite mehr nötig */
-            padding-left: 0;  /* Kein linker Einzug */
-        }
-         .schedule-date {
-             white-space: normal; /* Erlaube Umbruch im Datum auf Mobile */
-             margin-bottom: 3px; /* Kleiner Abstand nach unten */
-         }
-     }
-     /* --- Ende Schedule Mobile --- */
-
-     /* Andere Listen */
-     li:not(#schedule-display ul li) { /* Wende nicht auf Schedule an */
-         flex-direction: column; align-items: flex-start;
-     }
-     li:not(#schedule-display ul li) span { margin-bottom: 5px; }
-
-     /* Member Liste */
-     #member-list li { flex-direction: row; align-items: center; }
-     #member-list li .member-info { margin-bottom: 0; }
-     .member-actions { margin-top: 5px; margin-left: auto; }
-}
-@media (max-width: 480px) {
-     h1 { font-size: 1.3em; }
-     .header { margin-bottom: 15px; }
-     /* Schedule wird bereits bei 650px umgebrochen */
-     /* Member Liste */
-     #member-list li { flex-direction: column; align-items: flex-start; }
-     .member-actions { margin-left: 0; }
-}
+@media (max-width: 768px) { body { padding: 5px; } .container { padding: 10px; } h1 { font-size: 1.5em; } h2 { font-size: 1.2em; } button { font-size: 0.9em; padding: 8px 12px; } /* Schedule Mobile */ @media (max-width: 650px) { #schedule-display ul li { flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 5px; flex-wrap: nowrap; } .schedule-date, .schedule-conductor, .schedule-vip { flex-basis: auto; width: 100%; min-width: unset; padding-left: 0; } .schedule-date { white-space: normal; margin-bottom: 3px; } } /* Other Lists */ li:not(#schedule-display ul li) { flex-direction: column; align-items: flex-start; } li:not(#schedule-display ul li) span { margin-bottom: 5px; } /* Member List */ #member-list li { flex-direction: row; align-items: center; } #member-list li .member-info { margin-bottom: 0; } .member-actions { margin-top: 5px; margin-left: auto; } }
+@media (max-width: 480px) { h1 { font-size: 1.3em; } .header { margin-bottom: 15px; } /* Schedule already column at 650px */ /* Member List */ #schedule-display ul li.past-day { font-size: 0.9em; } #member-list li { flex-direction: column; align-items: flex-start; } .member-actions { margin-left: 0; } }
