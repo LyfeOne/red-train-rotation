@@ -1,4 +1,4 @@
-const SCRIPT_VERSION = "5.4"; // Added History Feature & Corrected Member List
+const SCRIPT_VERSION = "5.3"; // Added History Feature & Corrected Member List
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
