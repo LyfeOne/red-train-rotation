@@ -104,7 +104,10 @@ details > summary { cursor: pointer; font-weight: bold; font-size: 1.2em; margin
 details > summary::marker { color: var(--accent-color); }
 details > summary:hover { opacity: 0.8; }
 details[open] > summary { margin-bottom: 15px; }
-
+/* Admin Section Hidden via CSS */
+.admin-section {
+    display: none;
+}
 /* Mobile Anpassungen */
 @media (max-width: 768px) { body { padding: 5px; } .container { padding: 10px; } h1 { font-size: 1.5em; } h2 { font-size: 1.2em; } button { font-size: 0.9em; padding: 8px 12px; } /* Schedule Mobile */ @media (max-width: 650px) { #schedule-display ul li { flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 5px; flex-wrap: nowrap; } .schedule-date, .schedule-conductor, .schedule-vip { flex-basis: auto; width: 100%; min-width: unset; padding-left: 0; } .schedule-date { white-space: normal; margin-bottom: 3px; } } /* Other Lists */ li:not(#schedule-display ul li) { flex-direction: column; align-items: flex-start; } li:not(#schedule-display ul li) span { margin-bottom: 5px; } /* Member List */ #member-list li { flex-direction: row; align-items: center; } #member-list li .member-info { margin-bottom: 0; } .member-actions { margin-top: 5px; margin-left: auto; } }
 @media (max-width: 480px) { h1 { font-size: 1.3em; } .header { margin-bottom: 15px; } /* Schedule already column at 650px */ /* Member List */ #schedule-display ul li.past-day { font-size: 0.9em; } #member-list li { flex-direction: column; align-items: flex-start; } .member-actions { margin-left: 0; } }
