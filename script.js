@@ -1,12 +1,12 @@
 const SCRIPT_VERSION = "5.5"; // Updated: Removed Skipped VIP List, Improved Firebase Init
 // --- Firebase Configuration ---
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY", // ERSETZE DAS MIT DEINEM ECHTEN API KEY
-    authDomain: "red-train-rotation-tool.firebaseapp.com",
-    projectId: "red-train-rotation-tool",
-    storageBucket: "red-train-rotation-tool.firebasestorage.app",
-    messagingSenderId: "178389819926",
-    appId: "1:178389819926:web:bd59c273641ab8530ccb37"
+  apiKey: "AIzaSyAT8L9vDqFHyGB-MybtcLEBgCALuNflTZY",
+  authDomain: "red-train-rotation-tool.firebaseapp.com",
+  projectId: "red-train-rotation-tool",
+  storageBucket: "red-train-rotation-tool.firebasestorage.app",
+  messagingSenderId: "178389819926",
+  appId: "1:178389819926:web:bd59c273641ab8530ccb37"
 };
 try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error("Firebase Init Error", e); alert("Could not initialize Firebase."); }
 const db = firebase.firestore();
