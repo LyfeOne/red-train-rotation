@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>[rEd] Train Conductor Rotation</title>
-
     <!-- Link zur externen CSS-Datei -->
     <link rel="stylesheet" href="style.css">
 
@@ -18,7 +17,6 @@
             <h1>[rEd] Dead Redemption - Train Conductor Rotation</h1>
             <p>Server #749 (Shared)</p>
         </header>
-
         <!-- Current Day and Controls -->
         <section class="controls-section">
             <h2>Today's Status & Actions</h2>
@@ -40,13 +38,13 @@
                 <div id="vip-actions">
                      <p>Did the proposed VIP accept?</p>
                      <button id="vip-accepted" class="btn-primary btn-vip-action" disabled>Yes, VIP Accepted</button>
-                     <button id="vip-skipped" class="btn-secondary btn-vip-action" disabled>No, VIP Skipped</button>
+                     <button id="vip-skipped" class="btn-secondary btn-vip-action" disabled>No, VIP Skipped / Needs Alternative</button>
                 </div>
                 <div id="alternative-vip-area">
-                    <p><strong id="original-skipped-vip-name">---</strong> was skipped and added to priority queue.</p>
-                    <label for="alternative-vip-select">Select Alternative VIP for Today (Optional):</label>
-                    <select id="alternative-vip-select"> <option value="">-- No Alternative VIP --</option> </select>
-                    <button id="confirm-alternative-vip" class="btn-primary" style="margin-top: 10px;">Confirm & Advance Day</button>
+                    <p><strong id="original-skipped-vip-name">---</strong> was skipped.</p>
+                    <label for="alternative-vip-select">Select Alternative VIP for Today (Optional, if none, original VIP is just skipped for today):</label>
+                    <select id="alternative-vip-select"> <option value="">-- No Alternative VIP (Original is skipped) --</option> </select>
+                    <button id="confirm-alternative-vip" class="btn-primary" style="margin-top: 10px;">Confirm Choice & Advance Day</button>
                 </div>
                  <div id="advance-controls" style="margin-top: 15px;">
                     <button id="undo-advance" class="btn-secondary" disabled>Undo Last Advancement</button>
@@ -54,18 +52,20 @@
             </div>
         </section>
 
-        <!-- Skipped VIPs Queue -->
+        <!-- Skipped VIPs Queue - SECTION REMOVED -->
+        <!-- 
         <section class="skipped-section">
              <h2>Skipped VIP Queue (Priority)</h2>
              <div id="skipped-vips">
                  <p>Queue is empty.</p> <ul></ul>
              </div>
         </section>
+        -->
 
         <!-- Rotation Schedule -->
         <section class="schedule-section">
              <h2>Upcoming Rotation Schedule</h2>
-             <p>Showing the next full cycle of Members receiving VIP.</p>
+             <p>Showing past 3 days and upcoming schedule.</p>
              <div id="schedule-display"> <ul></ul> </div>
         </section>
 
@@ -78,7 +78,7 @@
              </div>
         </section>
 
-        <!-- Member Management (Collapsible) -->
+        <!-- Member Management -->
         <section class="member-section">
             <h2>Manage Alliance Members</h2>
             <div id="add-member-form-container">
@@ -89,32 +89,31 @@
                      <button type="submit" class="btn-primary" style="margin-top: 10px;">Add Member</button>
                  </form>
             </div>
-            <details id="member-list-details" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+            <details id="member-list-details" open style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
                 <summary> Show/Hide Current Members (<span id="member-count">0</span>) </summary>
                 <ul id="member-list"></ul>
             </details>
         </section>
 
-        <!-- Admin Controls (Collapsible) -->
-        
+        <!-- Admin Controls -->
         <section class="admin-section">
-            
             <h2>Admin</h2>
             <details>
                 <summary>Show/Hide Admin Controls</summary>
                 <div style="margin-top: 15px;">
-                    <p>Use reset only if absolutely necessary. It affects everyone.</p>
+                    <p>Use reset only if absolutely necessary. It affects everyone and resets to coded defaults.</p>
                     <button id="reset-data" class="btn-remove">Reset All Data to Defaults</button>
                 </div>
             </details>
         </section>
         
-
-        <!-- Footer mit Versionsanzeige -->
-        <footer><p style="text-align: center; font-size: 0.8em; margin-top: 20px; color: var(--accent-color);">Tool Version: <span id="script-version">?</span></p></footer>
+        <footer>
+            <p style="text-align: center; font-size: 0.8em; margin-top: 20px; color: var(--accent-color);">
+                Tool Version: <span id="script-version">?</span>
+            </p>
+        </footer>
     </div>
 
-    <!-- Link zur externen JavaScript-Datei -->
     <script defer src="script.js"></script>
 </body>
 </html>
