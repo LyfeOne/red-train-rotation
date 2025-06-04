@@ -366,4 +366,61 @@ details[open] > summary { margin-bottom: 15px; } /* Mehr Abstand wenn offen */
         margin-left: 0; /* Links ausrichten, wenn untereinander */
         margin-top: 8px;
     }
+    /* --- Styles für Inline Editing (v5.6) --- */
+.inline-edit-name, .inline-edit-count {
+    padding: 4px 6px;
+    font-size: 0.9em;
+    margin-right: 5px;
+    border: 1px solid var(--input-border);
+    border-radius: 3px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+}
+.inline-edit-name {
+    width: auto; /* Passt sich der Breite an, aber nicht zu breit */
+    flex-grow: 1; /* Nimmt Platz in der Member-Info-Zeile */
+    max-width: 150px; /* Verhindert zu breite Eingabefelder */
+}
+.inline-edit-count {
+    width: 60px; /* Feste Breite für Zahlen */
+    text-align: right;
+}
+
+.btn-small { /* Kleinere Buttons für Inline-Aktionen */
+    padding: 3px 8px;
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+/* Anpassung für Member-Liste, wenn im Edit-Modus */
+#member-list li .member-info {
+    /* Flex-Verhalten bleibt, damit Input und Buttons nebeneinander passen */
+    gap: 5px; /* Kleiner Abstand zwischen Input und Buttons */
+}
+
+/* Anpassung für Statistik-Liste */
+#vip-stats li {
+    justify-content: space-between; /* Stellt sicher, dass Name links und Controls rechts sind */
+    align-items: center;
+}
+.stats-name {
+    flex-grow: 1; /* Name nimmt verfügbaren Platz */
+}
+.stats-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Abstand zwischen Zähler/Input und Buttons */
+    margin-left: 10px; /* Abstand zum Namen */
+}
+.btn-edit-stat { /* Für den Stift-Button */
+    line-height: 1; /* Bessere vertikale Ausrichtung für Icon-Text */
+    padding: 4px 6px; /* Etwas kleiner */
+}
+
+/* Verhindern, dass der Rang-Select im Umbenennmodus angezeigt wird (optional, aber sauberer) */
+#member-list li .member-info input.inline-edit-name + select.rank-select-inline {
+    /* Dies ist ein Hack, besser wäre es, den Rank-Select im JS explizit auszublenden */
+    /* display: none; */ /* Vorerst nicht, da es die Struktur zu sehr ändert.
+                           Der Rank-Select bleibt sichtbar, aber nicht funktional relevant während des Umbenennens. */
+}
 }
