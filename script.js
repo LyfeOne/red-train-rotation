@@ -761,15 +761,42 @@ async function saveVipCount(memberId, newCountInput) {
         return;
     }
 
+    const member = getMemberById(memberId);
+    if (!member) {
+        alert("Member not found for VIP count update.");
+        return;
+    }
+
     if (!state.rotationState.vipCounts) {
         state.rotationState.vipCounts = {};
     }
     state.rotationState.vipCounts[memberId] = newCount;
-    state.editingVipCountMemberId = null;
+
+    // NEU: Wenn der Count > 0 ist und das Mitglied Member-Rang hat
+    // und noch nicht in completedSubstituteVipsThisRound ist, hinzufügen.
+    if (newCount > 0 && member.rank === 'Member') {
+        if (!state.rotationState.completedSubstituteVipsThisRound) {
+            state.rotationState.completedSubstituteVipsThisRound = [];
+        }
+        if (!state.rotationState.completedSubstituteVipsThisRound.includes(memberId)) {
+            state.rotationState.completedSubstituteVipsThisRound.push(memberId);
+            console.log(`${member.name} (ID: ${memberId}) wurde zur completedSubstituteVipsThisRound-Liste hinzugefügt, da VIP-Count manuell auf ${newCount} gesetzt wurde.`);
+        }
+    } else if (newCount === 0 && member.rank === 'Member') {
+        // Optional: Wenn der Count auf 0 zurückgesetzt wird, könnte man überlegen,
+        // das Mitglied aus completedSubstituteVipsThisRound zu entfernen, falls es nur deshalb drin war.
+        // Fürs Erste lassen wir es einfach, um die Logik nicht zu verkomplizieren.
+        // Wenn es entfernt werden soll, bräuchte man einen genaueren Mechanismus, um zu wissen,
+        // ob es *nur* wegen manuellem Edit drin war oder regulär als Substitute.
+    }
+
+
+    state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
 
     try {
         await updateFirestoreState();
-        renderStatistics();
+        render(); // render() statt nur renderStatistics(), da sich completedSubstituteVipsThisRound geändert haben kann
+                  // und das Auswirkungen auf die Schedule und Current Day Anzeige hat.
     } catch (error) {
         alert("Error saving VIP count: " + error.message);
     }
