@@ -185,7 +185,7 @@ function advanceRotation(vipAccepted, selectedMvpId = null) {
     const currentDayOfWeek = getDayOfWeek(currentDate);
 
     const currentR4R5Index = state.rotationState.r4r5Index ?? 0;
-    const currentMemberIndex = state.rotationState.memberIndex ?? 0;
+    const currentMemberIndex = state.rotationState.memberIndex ?? 0; // Der Index, mit dem calculateDailyAssignments startet
     const currentVipCounts = { ...(state.rotationState.vipCounts || {}) };
     const currentMvpCounts = { ...(state.rotationState.mvpCounts || {}) };
     const currentSelectedMvps = { ...(state.rotationState.selectedMvps || {}) };
@@ -194,7 +194,7 @@ function advanceRotation(vipAccepted, selectedMvpId = null) {
     const { conductor: proposedConductor, vip: proposedVip, effectiveMemberIndex } = calculateDailyAssignments(
         currentDateStr,
         currentR4R5Index,
-        currentMemberIndex,
+        currentMemberIndex, // Hier den rohen memberIndex übergeben
         currentSelectedMvps,
         currentSubstituteList
     );
@@ -206,30 +206,37 @@ function advanceRotation(vipAccepted, selectedMvpId = null) {
 
     const proposedVipId = proposedVip.id;
     let nextR4R5Index = currentR4R5Index;
+    // Verwende den effectiveMemberIndex, den calculateDailyAssignments zurückgibt, für die Berechnung des nächsten Index
     let nextMemberIndex = effectiveMemberIndex + 1;
 
     currentVipCounts[proposedVipId] = (currentVipCounts[proposedVipId] || 0) + 1;
 
-    const memberMembers = getMembersByRank('Member');
+    // === HIER DEN NEUEN CODE EINFÜGEN START ===
+    // Auch regulär akzeptierte VIPs zur Liste hinzufügen, wenn sie nicht schon drin sind.
+    // Das stellt sicher, dass sie in dieser Runde nicht erneut als regulärer VIP drankommen.
     let finalSubstituteList = [...currentSubstituteList]; // Kopie erstellen
+    if (getMemberById(proposedVipId)?.rank === 'Member' && !finalSubstituteList.includes(proposedVipId)) {
+        finalSubstituteList.push(proposedVipId);
+        console.log(`advanceRotation: ${proposedVip.name} (ID: ${proposedVipId}) added to completedSubstituteVipsThisRound as they were the accepted VIP.`);
+    }
+    // === HIER DEN NEUEN CODE EINFÜGEN ENDE ===
 
+    const memberMembers = getMembersByRank('Member');
+    // Die finalSubstituteList wird hier weiterverwendet (nicht neu initialisiert mit currentSubstituteList)
+    
     // Robusteres Leeren der Substitute-Liste
     if (memberMembers.length > 0) {
+        // Prüfen, ob ALLE aktuellen Member-Mitglieder in der (potenziell gerade erweiterten) finalSubstituteList sind
         const allCurrentMembersAreSubstitutes = memberMembers.every(mem => finalSubstituteList.includes(mem.id));
         if (allCurrentMembersAreSubstitutes) {
             console.log("VIP Rotation Round End (all members were in substitute list)! Clearing completedSubstituteVipsThisRound.");
-            finalSubstituteList = [];
+            finalSubstituteList = []; // Liste leeren für die neue Runde
         }
-        // Die alte Modulo-Bedingung könnte als zusätzlicher Fallback dienen, ist aber fehleranfälliger bei Listenänderungen.
-        // else if ((nextMemberIndex % memberMembers.length === 0) && nextMemberIndex >= memberMembers.length) {
-        //    console.log("VIP Rotation Round End (index wrap around)! Clearing completedSubstituteVipsThisRound list.");
-        //    finalSubstituteList = [];
-        // }
     }
-
+    // Die alte Modulo-Bedingung ist jetzt weniger relevant, wenn .every() verwendet wird.
 
     let finalConductorId = proposedConductor.id;
-    if (currentDayOfWeek >= 2 && currentDayOfWeek <= 6) {
+    if (currentDayOfWeek >= 2 && currentDayOfWeek <= 6) { // Di-Sa
         nextR4R5Index = (currentR4R5Index + 1);
     }
     if (selectedMvpId) {
@@ -254,7 +261,7 @@ function advanceRotation(vipAccepted, selectedMvpId = null) {
     state.rotationState.selectedMvps = currentSelectedMvps;
     state.rotationState.vipCounts = currentVipCounts;
     state.rotationState.mvpCounts = currentMvpCounts;
-    state.rotationState.completedSubstituteVipsThisRound = finalSubstituteList;
+    state.rotationState.completedSubstituteVipsThisRound = finalSubstituteList; // Die aktualisierte Liste speichern
     return true;
 }
 
