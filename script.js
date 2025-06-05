@@ -751,7 +751,7 @@ function toggleEditVipCountMode(memberId) {
     renderStatistics();
 }
 
-async function saveVipCount(memberId, newCountInput) {
+async function saveVipCount(memberId, newCountInput) { // HIER async HINZUGEFÜGT
     const newCountString = newCountInput.value;
     const newCount = parseInt(newCountString, 10);
 
@@ -801,29 +801,8 @@ async function saveVipCount(memberId, newCountInput) {
     state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
 
     try {
-        await updateFirestoreState();
+        await updateFirestoreState(); // Dieses await benötigt async function
         render(); // Vollständiges Rendern, da sich completedSubstituteVipsThisRound geändert haben kann
-    } catch (error) {
-        alert("Error saving VIP count: " + error.message);
-    }
-}
-
-    state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
-
-    try {
-        await updateFirestoreState();
-        render(); // Vollständiges Rendern, da sich completedSubstituteVipsThisRound geändert haben kann
-    } catch (error) {
-        alert("Error saving VIP count: " + error.message);
-    }
-}
-
-    state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
-
-    try {
-        await updateFirestoreState();
-        render(); // render() statt nur renderStatistics(), da sich completedSubstituteVipsThisRound geändert haben kann
-                  // und das Auswirkungen auf die Schedule und Current Day Anzeige hat.
     } catch (error) {
         alert("Error saving VIP count: " + error.message);
     }
