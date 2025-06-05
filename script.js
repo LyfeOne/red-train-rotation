@@ -776,6 +776,7 @@ async function saveVipCount(memberId, newCountInput) {
         state.rotationState.completedSubstituteVipsThisRound = [];
     }
 
+    // Diese Logik ist entscheidend
     if (member.rank === 'Member') { // Nur für Mitglieder relevant
         const indexInSubstitutes = state.rotationState.completedSubstituteVipsThisRound.indexOf(memberId);
 
@@ -787,13 +788,25 @@ async function saveVipCount(memberId, newCountInput) {
             }
         } else if (newCount === 0) {
             // Wenn Count == 0 und in der Liste, entfernen
-            // Dies macht das Mitglied wieder für die aktuelle Runde verfügbar.
             if (indexInSubstitutes > -1) {
                 state.rotationState.completedSubstituteVipsThisRound.splice(indexInSubstitutes, 1);
                 console.log(`${member.name} (ID: ${memberId}) wurde aus der completedSubstituteVipsThisRound-Liste entfernt (VIP-Count manuell auf 0).`);
+            } else {
+                // Für Debugging: Wenn es nicht in der Liste war, obwohl Count auf 0 gesetzt wurde.
+                console.log(`${member.name} (ID: ${memberId}) war nicht in completedSubstituteVipsThisRound, als VIP-Count auf 0 gesetzt wurde.`);
             }
         }
     }
+
+    state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
+
+    try {
+        await updateFirestoreState();
+        render(); // Vollständiges Rendern, da sich completedSubstituteVipsThisRound geändert haben kann
+    } catch (error) {
+        alert("Error saving VIP count: " + error.message);
+    }
+}
 
     state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
 
