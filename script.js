@@ -266,7 +266,7 @@ function updateFirestoreState() {
             mvpCounts: state.rotationState.mvpCounts || {},
             alternativeVips: state.rotationState.alternativeVips || {},
             completedSubstituteVipsThisRound: state.rotationState.completedSubstituteVipsThisRound || [],
-            dailyHistory: state.rotationSate.dailyHistory || {} // Tippfehler hier korrigiert zu dailyHistory
+            dailyHistory: state.rotationState.dailyHistory || {} // Tippfehler hier korrigiert zu dailyHistory
         }
     }));
     delete stateToSave.editingMemberId;
