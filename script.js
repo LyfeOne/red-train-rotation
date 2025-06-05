@@ -378,12 +378,85 @@ async function saveNewName(memberId, newNameInput) {
         return;
     }
 
+    // Merke dir den alten Namen für die Konsistenzprüfung, falls nötig
+    const oldName = originalMember.name;
+
     // Prüfen, ob der neue Name bereits von einem ANDEREN Mitglied verwendet wird
     if (state.members.some(m => m.id !== memberId && m.name.toLowerCase() === newName.toLowerCase())) {
         alert(`Another member with the name "${newName}" already exists.`);
         newNameInput.focus();
         return;
     }
+
+    // Tatsächliche Namensänderung durchführen
+    originalMember.name = newName;
+    state.editingMemberId = null; // Bearbeitungsmodus für UI beenden
+
+    // Mitgliederliste neu sortieren
+    sortMembers();
+
+    // --- BEGINN: memberIndex anpassen, wenn das umbenannte Mitglied nach vorne rückt ---
+    // Diese Logik wird nur relevant, wenn das umbenannte Mitglied ein "Member" ist.
+    if (originalMember.rank === 'Member' && state.rotationState && typeof state.rotationState.memberIndex === 'number') {
+        const memberMembersAfterSort = getMembersByRank('Member');
+        const newIndexOfRenamedMember = memberMembersAfterSort.findIndex(m => m.id === memberId);
+
+        if (newIndexOfRenamedMember !== -1) {
+            // Ist das umbenannte Mitglied (jetzt "Chris") noch nicht in completedSubstituteVipsThisRound?
+            const isRenamedMemberAvailableForVip = !(state.rotationState.completedSubstituteVipsThisRound || []).includes(memberId);
+
+            // Finde den Index des Mitglieds, das aktuell durch memberIndex referenziert wird
+            // oder als nächstes dran wäre, *bevor* wir den Index ggf. auf den umbenannten Member setzen.
+            let currentIndexReferencedByMemberIndex = -1;
+            if (memberMembersAfterSort.length > 0) {
+                 currentIndexReferencedByMemberIndex = state.rotationState.memberIndex % memberMembersAfterSort.length;
+            }
+
+
+            // Wenn das umbenannte Mitglied jetzt VOR dem aktuell durch memberIndex referenzierten Punkt liegt
+            // UND es als VIP verfügbar ist, dann setzen wir den memberIndex auf das umbenannte Mitglied.
+            if (newIndexOfRenamedMember < currentIndexReferencedByMemberIndex && isRenamedMemberAvailableForVip) {
+                state.rotationState.memberIndex = newIndexOfRenamedMember;
+                console.log(`saveNewName: '${oldName}' renamed to '${newName}'. '${newName}' moved to earlier position ${newIndexOfRenamedMember} and is available. MemberIndex set to ${newIndexOfRenamedMember}.`);
+            } else if (newIndexOfRenamedMember === currentIndexReferencedByMemberIndex && isRenamedMemberAvailableForVip) {
+                // Wenn es genau auf die Position gerutscht ist, wo der memberIndex eh hinzeigt,
+                // und es verfügbar ist, ist das auch ok, Index bleibt.
+                 state.rotationState.memberIndex = newIndexOfRenamedMember; // Stellt sicher, dass es wirklich dieser Index ist
+                 console.log(`saveNewName: '${oldName}' renamed to '${newName}'. '${newName}' moved to current memberIndex position ${newIndexOfRenamedMember} and is available. MemberIndex set.`);
+            }
+             else {
+                // Fall: Das umbenannte Mitglied ist nicht nach vorne gerutscht oder nicht verfügbar,
+                // oder es ist nach vorne gerutscht, aber hinter dem aktuellen Rotationspunkt.
+                // In diesem Fall versuchen wir, den *relativen* Rotationspunkt beizubehalten.
+                // Wir müssen den nächsten VIP finden, der *nicht* das gerade umbenannte Mitglied ist (falls es nicht nach vorne gerutscht und relevant ist),
+                // um zu verhindern, dass die Rotation springt.
+                // DIESER TEIL IST DER KOMPLEXESTE, UM DIE "ALTE" REIHENFOLGE ZU RESPEKTIEREN, WENN DER UMGENANNTE NICHT DIREKT DRAN IST.
+
+                // Ermittle, wer vor der Umbenennung der nächste gewesen wäre (ohne den umbenannten selbst zu berücksichtigen, falls er es war)
+                let previousTrueNextVipId = null;
+                let tempSearchIndex = state.rotationState.memberIndex;
+                let iterations = 0;
+                const membersBeforeSortForThisLogic = getMembersByRank('Member').filter(m => m.id !== memberId); // Temporär umbenannten Member ausschließen
+
+                // Hier benötigen wir eine Referenz auf die Liste, wie sie VOR der Sortierung war, um den "logisch nächsten" zu finden.
+                // Das wird schnell sehr komplex.
+                // EINFACHERER ANSATZ FÜR JETZT: Wenn nicht nach vorne gerutscht und erste Wahl,
+                // bleibt der memberIndex wie er ist. Die Sortierung hat dann nur die "Zukunft" beeinflusst.
+                // Die komplexere Logik zur Beibehaltung der exakten relativen Position wird hier vorerst weggelassen,
+                // da der Fokus darauf liegt, dass ein "nach vorne gerutschter, verfügbarer" Member auch dran kommt.
+                console.log(`saveNewName: '${newName}' did not move to an earlier relevant position or is not available. MemberIndex logic defers to standard rotation.`);
+            }
+        }
+    }
+    // --- ENDE: memberIndex anpassen ---
+
+    try {
+        await updateFirestoreState();
+        render(); // Vollständiges Rendern, um alle Änderungen (Name, Schedule) anzuzeigen
+    } catch (error) {
+        alert("Error saving new name: " + error.message);
+    }
+}
 
     // --- BEGINN: Logik zur Beibehaltung des Rotationspunktes ---
     let trueNextVipIdBeforeChange = null;
