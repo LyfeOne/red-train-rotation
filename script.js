@@ -373,23 +373,91 @@ async function saveNewName(memberId, newNameInput) {
     }
 
     const originalMember = getMemberById(memberId);
-    if (!originalMember) return;
+    if (!originalMember) {
+        console.error("saveNewName: Original member not found with ID:", memberId);
+        return;
+    }
 
+    // Prüfen, ob der neue Name bereits von einem ANDEREN Mitglied verwendet wird
     if (state.members.some(m => m.id !== memberId && m.name.toLowerCase() === newName.toLowerCase())) {
         alert(`Another member with the name "${newName}" already exists.`);
         newNameInput.focus();
         return;
     }
 
+    // --- BEGINN: Logik zur Beibehaltung des Rotationspunktes ---
+    let trueNextVipIdBeforeChange = null;
+    let effectiveMemberIndexOfTrueNextVip = -1;
+
+    if (state.rotationState && typeof state.rotationState.memberIndex === 'number') {
+        const memberMembersBeforeSort = getMembersByRank('Member'); // Mitgliederliste VOR der Namensänderung/Sortierung
+
+        if (memberMembersBeforeSort.length > 0) {
+            let tempSearchIndex = state.rotationState.memberIndex;
+            let foundNextVip = null;
+            let iterations = 0; // Schutz gegen Endlosschleifen
+
+            // Suche den nächsten gültigen VIP basierend auf dem aktuellen memberIndex und completedSubstitutes
+            while (!foundNextVip && iterations < memberMembersBeforeSort.length * 2) { // *2 als großzügiger Puffer
+                const candidateIndex = tempSearchIndex % memberMembersBeforeSort.length;
+                const candidate = memberMembersBeforeSort[candidateIndex];
+
+                if (candidate && !(state.rotationState.completedSubstituteVipsThisRound || []).includes(candidate.id)) {
+                    foundNextVip = candidate;
+                    trueNextVipIdBeforeChange = foundNextVip.id;
+                    effectiveMemberIndexOfTrueNextVip = candidateIndex; // Merke dir den Index in der *alten* Liste
+                }
+                tempSearchIndex++;
+                iterations++;
+            }
+            if (trueNextVipIdBeforeChange) {
+                console.log(`saveNewName: Next scheduled VIP before rename was '${getMemberById(trueNextVipIdBeforeChange)?.name}' (ID: ${trueNextVipIdBeforeChange}) at old index ${effectiveMemberIndexOfTrueNextVip}.`);
+            } else {
+                console.log("saveNewName: Could not determine next scheduled VIP before rename (maybe all are substitutes or list empty).");
+            }
+        }
+    }
+    // --- ENDE: Logik zur Beibehaltung des Rotationspunktes ---
+
+    // Tatsächliche Namensänderung durchführen
     originalMember.name = newName;
-    state.editingMemberId = null;
+    state.editingMemberId = null; // Bearbeitungsmodus für UI beenden
+
+    // Mitgliederliste neu sortieren
     sortMembers();
+
+    // --- BEGINN: memberIndex anpassen nach Neusortierung ---
+    if (trueNextVipIdBeforeChange) {
+        const memberMembersAfterSort = getMembersByRank('Member'); // Mitgliederliste NACH der Sortierung
+        const newIndexOfTrueNextVip = memberMembersAfterSort.findIndex(m => m.id === trueNextVipIdBeforeChange);
+
+        if (newIndexOfTrueNextVip !== -1) {
+            // Setze den memberIndex auf den neuen Index des zuvor bestimmten nächsten VIPs.
+            // Die calculateDailyAssignments Funktion wird dann von hier aus korrekt weiterarbeiten.
+            state.rotationState.memberIndex = newIndexOfTrueNextVip;
+            console.log(`saveNewName: MemberIndex after rename and sort has been set to ${newIndexOfTrueNextVip} (for member '${memberMembersAfterSort[newIndexOfTrueNextVip]?.name}').`);
+        } else {
+            // Dieser Fall sollte selten sein, es sei denn, das Mitglied wurde irgendwie entfernt
+            // oder es gab einen Fehler bei der ID-Übereinstimmung.
+            console.warn(`saveNewName: Could not find the previously scheduled VIP (ID: ${trueNextVipIdBeforeChange}) in the list after sorting. MemberIndex will not be adjusted.`);
+            // Überlege, ob hier ein Fallback-Verhalten sinnvoll ist, z.B. Index auf 0 setzen oder belassen.
+            // Belassen ist erstmal sicherer, um unerwartetes Verhalten zu vermeiden.
+        }
+    } else {
+        // Wenn kein 'trueNextVipIdBeforeChange' gefunden wurde (z.B. weil alle schon VIP waren oder Liste leer),
+        // dann gibt es keinen spezifischen Index, den wir wiederherstellen müssen.
+        // Der aktuelle memberIndex bleibt, was in diesem Fall meistens 0 oder der Start einer neuen Runde sein sollte.
+        console.log("saveNewName: No specific next VIP to track, memberIndex remains as is (likely start of new round or empty list).");
+    }
+    // --- ENDE: memberIndex anpassen nach Neusortierung ---
+
     try {
         await updateFirestoreState();
-        render(); // Vollständiges Rendern, da Name sich auf Schedule etc. auswirken kann
+        render(); // Vollständiges Rendern, um alle Änderungen (Name, Schedule) anzuzeigen
     } catch (error) {
         alert("Error saving new name: " + error.message);
-        // Optional: Alten Namen wiederherstellen
+        // Optional: Alten Namen wiederherstellen bei Fehler
+        // originalMember.name = alterName; // Müsste vorher gespeichert werden
     }
 }
 
