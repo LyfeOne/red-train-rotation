@@ -293,61 +293,90 @@ function addMember(event) {
     event.preventDefault();
     const name = newMemberNameInput.value.trim();
     const rank = newMemberRankSelect.value;
-    if (name && rank) {
-        if (!Array.isArray(state.members)) state.members = [];
-        if (state.members.some(m => m?.name.toLowerCase() === name.toLowerCase())) {
-            alert(`Member with name "${name}" already exists.`);
-            return;
-        }
-        const newMember = { id: generateId(), name: name, rank: rank };
-        
-        // --- BEGINN: Logik zur Anpassung des memberIndex beim Hinzufügen ---
-        let trueNextVipIdBeforeChange = null;
-        if (rank === 'Member' && state.rotationState && typeof state.rotationState.memberIndex === 'number') {
-            const memberMembersBeforeAdd = getMembersByRank('Member');
-            if (memberMembersBeforeAdd.length > 0) {
-                let tempSearchIndex = state.rotationState.memberIndex;
-                let foundNextVip = null;
+
+    if (!name || !rank) {
+        alert("Name and Rank are required to add a member.");
+        return;
+    }
+
+    if (!Array.isArray(state.members)) state.members = [];
+    if (state.members.some(m => m?.name.toLowerCase() === name.toLowerCase())) {
+        alert(`Member with name "${name}" already exists.`);
+        return;
+    }
+
+    const newMember = { id: generateId(), name: name, rank: rank };
+
+    // --- BEGINN: Logik zur Anpassung des memberIndex, wenn das neue Mitglied die Reihenfolge beeinflusst ---
+    let adjustMemberIndex = false; // Dieses Flag war in meinem Vorschlag nicht explizit, aber die Logik ist ähnlich
+    let oldMemberIndexBeforeAdd = state.rotationState?.memberIndex ?? 0;
+
+    if (newMember.rank === 'Member' && state.rotationState && typeof state.rotationState.memberIndex === 'number') {
+        adjustMemberIndex = true; // Markieren, dass wir den Index anpassen müssen
+    }
+    // --- ENDE: Vorbereitungen für Index-Anpassung ---
+
+    state.members.push(newMember);
+    sortMembers(); // Liste wird mit dem neuen Mitglied neu sortiert
+
+    // --- BEGINN: Tatsächliche Anpassung des memberIndex NACH Hinzufügen und Sortieren ---
+    if (adjustMemberIndex) { // Nur wenn ein 'Member' hinzugefügt wurde
+        const memberMembersAfterAdd = getMembersByRank('Member');
+        const newIndexOfAddedMember = memberMembersAfterAdd.findIndex(m => m.id === newMember.id);
+
+        if (newIndexOfAddedMember !== -1) {
+            const isNewMemberAvailableForVip = true; // Neue Member sind immer verfügbar
+
+            let previousNextVipId = null;
+            const membersBeforeAddSimulated = memberMembersAfterAdd.filter(m => m.id !== newMember.id); // Simuliere Liste ohne neuen Member
+            
+            if (membersBeforeAddSimulated.length > 0 && oldMemberIndexBeforeAdd < membersBeforeAddSimulated.length) {
+                let tempSearchIdx = oldMemberIndexBeforeAdd;
                 let iterations = 0;
-                while (!foundNextVip && iterations < memberMembersBeforeAdd.length * 2) {
-                    const candidateIndex = tempSearchIndex % memberMembersBeforeAdd.length;
-                    const candidate = memberMembersBeforeAdd[candidateIndex];
+                while (iterations < membersBeforeAddSimulated.length * 2) { // Schutz gegen Endlosschleife
+                    const candidateIndex = tempSearchIdx % membersBeforeAddSimulated.length;
+                    const candidate = membersBeforeAddSimulated[candidateIndex];
                     if (candidate && !(state.rotationState.completedSubstituteVipsThisRound || []).includes(candidate.id)) {
-                        foundNextVip = candidate;
-                        trueNextVipIdBeforeChange = foundNextVip.id;
+                        previousNextVipId = candidate.id;
+                        break; 
                     }
-                    tempSearchIndex++;
+                    tempSearchIdx++;
                     iterations++;
                 }
-                if(trueNextVipIdBeforeChange) console.log(`addMember: Next scheduled VIP before add was ID: ${trueNextVipIdBeforeChange}`);
             }
-        }
-        // --- ENDE: Logik zur Anpassung des memberIndex beim Hinzufügen ---
+            
+            let newIndexOfPreviousNextVip = -1;
+            if (previousNextVipId) {
+                newIndexOfPreviousNextVip = memberMembersAfterAdd.findIndex(m => m.id === previousNextVipId);
+            }
 
-        state.members.push(newMember);
-        sortMembers(); // Sortieren NACH dem Hinzufügen
-
-        // --- BEGINN: memberIndex anpassen nach Hinzufügen und Sortieren ---
-        if (rank === 'Member' && trueNextVipIdBeforeChange) {
-            const memberMembersAfterAdd = getMembersByRank('Member');
-            const newIndexOfTrueNextVip = memberMembersAfterAdd.findIndex(m => m.id === trueNextVipIdBeforeChange);
-            if (newIndexOfTrueNextVip !== -1) {
-                state.rotationState.memberIndex = newIndexOfTrueNextVip;
-                console.log(`addMember: MemberIndex after add and sort set to ${newIndexOfTrueNextVip} for VIP ID ${trueNextVipIdBeforeChange}`);
+            if (newIndexOfAddedMember !== -1 && previousNextVipId && newIndexOfPreviousNextVip !== -1 && newIndexOfAddedMember < newIndexOfPreviousNextVip && isNewMemberAvailableForVip) {
+                state.rotationState.memberIndex = newIndexOfAddedMember;
+                console.log(`addMember: New member '${newMember.name}' inserted at ${newIndexOfAddedMember} before previously scheduled VIP ('${getMemberById(previousNextVipId)?.name}'). MemberIndex set to ${newIndexOfAddedMember}.`);
+            } else if (newIndexOfAddedMember !== -1 && !previousNextVipId && isNewMemberAvailableForVip && memberMembersAfterAdd.length > 0) {
+                // Kein vorheriger nächster VIP (vielleicht war die Liste leer oder alle durch), oder das neue Mitglied ist das einzige
+                state.rotationState.memberIndex = newIndexOfAddedMember; // Oder auf 0 setzen, wenn es das erste ist.
+                console.log(`addMember: New member '${newMember.name}' added at ${newIndexOfAddedMember}. No clear previous next VIP or list was empty. MemberIndex set.`);
+            } else if (newIndexOfPreviousNextVip !== -1) {
+                // Neues Mitglied drängelt nicht vor, setze Index auf den alten "nächsten"
+                state.rotationState.memberIndex = newIndexOfPreviousNextVip;
+                console.log(`addMember: New member '${newMember.name}' added. Rotation continues with previously scheduled next VIP ('${getMemberById(previousNextVipId)?.name}') at new index ${newIndexOfPreviousNextVip}.`);
             } else {
-                 console.warn(`addMember: Could not find previously scheduled VIP ID ${trueNextVipIdBeforeChange} after add. Index not adjusted.`);
+                // Fallback: Wenn kein "previousNextVipId" gefunden (z.B. alle Member waren in completedSubs),
+                // oder wenn das neue Mitglied das einzige ist.
+                state.rotationState.memberIndex = (memberMembersAfterAdd.length > 0) ? newIndexOfAddedMember : 0;
+                 console.log(`addMember: Fallback or first member - MemberIndex set to new member's index ${state.rotationState.memberIndex} or 0.`);
             }
-        } else if (rank === 'Member' && memberMembersAfterAdd.length === 1) { // Wenn es das erste Member-Mitglied ist
-            state.rotationState.memberIndex = 0; // Starte beim ersten Mitglied
-            console.log(`addMember: First member added, memberIndex set to 0.`);
+        } else if (memberMembersAfterAdd.length === 1 && newMember.rank === 'Member') { // Gerade hinzugefügt und ist das einzige Member
+            state.rotationState.memberIndex = 0; // Index auf 0 setzen
+             console.log(`addMember: '${newMember.name}' is the first and only member. MemberIndex set to 0.`);
         }
-        // --- ENDE: memberIndex anpassen nach Hinzufügen und Sortieren ---
-        
-        updateFirestoreState().then(render);
-        newMemberNameInput.value = '';
-    } else {
-        alert("Name and Rank are required to add a member.");
     }
+    // --- ENDE: Tatsächliche Anpassung des memberIndex ---
+
+    updateFirestoreState().then(render);
+    newMemberNameInput.value = '';
+    newMemberRankSelect.value = 'Member'; // Standardwert für das nächste Hinzufügen
 }
 
 function removeMember(id) {
