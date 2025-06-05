@@ -772,24 +772,38 @@ async function saveVipCount(memberId, newCountInput) {
     }
     state.rotationState.vipCounts[memberId] = newCount;
 
-    // NEU: Wenn der Count > 0 ist und das Mitglied Member-Rang hat
-    // und noch nicht in completedSubstituteVipsThisRound ist, hinzufügen.
-    if (newCount > 0 && member.rank === 'Member') {
-        if (!state.rotationState.completedSubstituteVipsThisRound) {
-            state.rotationState.completedSubstituteVipsThisRound = [];
-        }
-        if (!state.rotationState.completedSubstituteVipsThisRound.includes(memberId)) {
-            state.rotationState.completedSubstituteVipsThisRound.push(memberId);
-            console.log(`${member.name} (ID: ${memberId}) wurde zur completedSubstituteVipsThisRound-Liste hinzugefügt, da VIP-Count manuell auf ${newCount} gesetzt wurde.`);
-        }
-    } else if (newCount === 0 && member.rank === 'Member') {
-        // Optional: Wenn der Count auf 0 zurückgesetzt wird, könnte man überlegen,
-        // das Mitglied aus completedSubstituteVipsThisRound zu entfernen, falls es nur deshalb drin war.
-        // Fürs Erste lassen wir es einfach, um die Logik nicht zu verkomplizieren.
-        // Wenn es entfernt werden soll, bräuchte man einen genaueren Mechanismus, um zu wissen,
-        // ob es *nur* wegen manuellem Edit drin war oder regulär als Substitute.
+    if (!state.rotationState.completedSubstituteVipsThisRound) { // Sicherstellen, dass die Liste existiert
+        state.rotationState.completedSubstituteVipsThisRound = [];
     }
 
+    if (member.rank === 'Member') { // Nur für Mitglieder relevant
+        const indexInSubstitutes = state.rotationState.completedSubstituteVipsThisRound.indexOf(memberId);
+
+        if (newCount > 0) {
+            // Wenn Count > 0 und noch nicht in der Liste, hinzufügen
+            if (indexInSubstitutes === -1) {
+                state.rotationState.completedSubstituteVipsThisRound.push(memberId);
+                console.log(`${member.name} (ID: ${memberId}) wurde zur completedSubstituteVipsThisRound-Liste hinzugefügt (VIP-Count manuell auf ${newCount}).`);
+            }
+        } else if (newCount === 0) {
+            // Wenn Count == 0 und in der Liste, entfernen
+            // Dies macht das Mitglied wieder für die aktuelle Runde verfügbar.
+            if (indexInSubstitutes > -1) {
+                state.rotationState.completedSubstituteVipsThisRound.splice(indexInSubstitutes, 1);
+                console.log(`${member.name} (ID: ${memberId}) wurde aus der completedSubstituteVipsThisRound-Liste entfernt (VIP-Count manuell auf 0).`);
+            }
+        }
+    }
+
+    state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
+
+    try {
+        await updateFirestoreState();
+        render(); // Vollständiges Rendern, da sich completedSubstituteVipsThisRound geändert haben kann
+    } catch (error) {
+        alert("Error saving VIP count: " + error.message);
+    }
+}
 
     state.editingVipCountMemberId = null; // Bearbeitungsmodus beenden
 
