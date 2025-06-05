@@ -255,6 +255,7 @@ function advanceRotation(vipAccepted, selectedMvpId = null) { // Nur für "VIP A
 
 
 function updateFirestoreState() {
+    // Make a deep copy of the state to avoid issues if state is modified while saving
     const stateToSave = JSON.parse(JSON.stringify({
         members: state.members || [],
         rotationState: {
@@ -266,9 +267,10 @@ function updateFirestoreState() {
             mvpCounts: state.rotationState.mvpCounts || {},
             alternativeVips: state.rotationState.alternativeVips || {},
             completedSubstituteVipsThisRound: state.rotationState.completedSubstituteVipsThisRound || [],
-            dailyHistory: state.rotationState.dailyHistory || {} // Tippfehler hier korrigiert zu dailyHistory
+            dailyHistory: state.rotationState.dailyHistory || {} // KORREKTUR: rotationState statt rotationSate
         }
     }));
+    // Remove temporary UI state variables before saving
     delete stateToSave.editingMemberId;
     delete stateToSave.editingVipCountMemberId;
 
